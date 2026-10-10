@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-canvas text-text font-sans antialiased;
+  font-size: 13px;
+}
+
+/* Scrollbars that do not fight the dark surface. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2b323b transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #2b323b;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #3b4551;
+}
+
+@layer components {
+  .panel {
+    @apply bg-surface border border-line rounded-sm;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between gap-3 px-3 py-2 border-b border-line;
+  }
+
+  .panel-title {
+    @apply text-2xs uppercase tracking-widest text-text-muted font-semibold;
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-sm border border-line-strong
+           bg-surface-raised px-2.5 py-1 text-2xs font-medium text-text
+           transition-colors hover:bg-line hover:border-accent-dim
+           focus:outline-none focus-visible:ring-1 focus-visible:ring-accent
+           disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply border-accent-dim bg-accent-faint text-accent hover:bg-accent-dim/40;
+  }
+
+  .btn-danger {
+    @apply border-status-bad/40 text-status-bad hover:bg-status-bad/15;
+  }
+
+  .input {
+    @apply w-full rounded-sm border border-line-strong bg-surface-sunken px-2 py-1
+           text-2xs text-text placeholder:text-text-faint
+           focus:outline-none focus:border-accent-dim;
+  }
+
+  .tag {
+    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5
+           text-2xs font-medium whitespace-nowrap;
+  }
+
+  .data-table {
+    @apply w-full text-2xs font-mono;
+  }
+
+  .data-table th {
+    @apply sticky top-0 z-10 bg-surface-raised px-2 py-1.5 text-left
+           font-semibold text-text-muted uppercase tracking-wider
+           border-b border-line whitespace-nowrap;
+  }
+
+  .data-table td {
+    @apply px-2 py-1 border-b border-line/60 whitespace-nowrap text-text;
+  }
+
+  .data-table tbody tr:hover td {
+    @apply bg-surface-raised;
+  }
+
+  .hexdump {
+    @apply font-mono text-2xs leading-5;
+  }
+
+  .hex-offset {
+    @apply text-text-faint select-none;
+  }
+
+  .hex-byte {
+    @apply px-[1px] rounded-[2px];
+  }
+
+  .hex-byte-highlight {
+    @apply bg-accent text-canvas font-semibold;
+  }
+
+  .hex-byte-selected {
+    @apply bg-accent-dim text-canvas;
+  }
+
+  .hex-byte-gap {
+    @apply text-status-warn;
+  }
+
+  .link {
+    @apply text-accent hover:underline underline-offset-2 cursor-pointer;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-2 px-2.5 py-1.5 text-2xs rounded-sm
+           text-text-muted hover:text-text hover:bg-surface-raised
+           transition-colors;
+  }
+
+  .nav-item-active {
+    @apply bg-accent-faint text-accent;
+  }
+}
+
+/* Never render untrusted text as markup. */
+.sanitized-markdown h1 { @apply text-lg font-semibold mt-4 mb-2; }
+.sanitized-markdown h2 { @apply text-base font-semibold mt-4 mb-2; }
+.sanitized-markdown h3 { @apply text-sm font-semibold mt-3 mb-1; }
+.sanitized-markdown p { @apply my-2 leading-relaxed; }
+.sanitized-markdown ul { @apply my-2 pl-5 list-disc; }
+.sanitized-markdown ol { @apply my-2 pl-5 list-decimal; }
+.sanitized-markdown code {
+  @apply font-mono text-2xs bg-surface-sunken px-1 rounded-sm;
+}
+.sanitized-markdown blockquote {
+  @apply border-l-2 border-line-strong pl-3 my-2 text-text-muted italic;
+}
+.sanitized-markdown table { @apply my-2 w-full text-2xs; }
+.sanitized-markdown th { @apply text-left border-b border-line px-2 py-1; }
+.sanitized-markdown td { @apply border-b border-line/60 px-2 py-1; }

@@ -1,0 +1,20 @@
+[
+  {
+    "timestamp": "2026-01-01T00:00:00.007599Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "device_serial",
+      "connection_instance": 0
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:05:00.004000Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "device_serial",
+      "connection_instance": 1
+    },
+    "observed_result": "success"
+  }
+]

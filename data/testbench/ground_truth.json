@@ -1,0 +1,62 @@
+{
+  "generator": "mplab-testbench/1.0",
+  "framing": {
+    "method": "length_prefix",
+    "length_field": {
+      "offset": 0,
+      "size": 2,
+      "endianness": "big",
+      "includes_header": true
+    },
+    "note": "LEN counts the two length bytes themselves."
+  },
+  "fields": [
+    {
+      "name": "length",
+      "offset": 0,
+      "size": 2,
+      "type": "uint16",
+      "endianness": "big"
+    },
+    {
+      "name": "message_type",
+      "offset": 2,
+      "size": 1,
+      "type": "uint8"
+    },
+    {
+      "name": "request_id",
+      "offset": 3,
+      "size": 2,
+      "type": "uint16",
+      "endianness": "big"
+    }
+  ],
+  "message_types": {
+    "1": "read_parameter",
+    "2": "set_parameter",
+    "3": "measurements",
+    "4": "ack",
+    "5": "heartbeat"
+  },
+  "request_bodies": {
+    "1": "01 + param_id(u16 BE)",
+    "2": "02 + param_id(u16 BE) + value(u32 BE)",
+    "3": "03 + sample_count(u16 BE) + interval(u32 BE)"
+  },
+  "response_bodies": {
+    "1": "01 + value(u32 BE) + status(u8)",
+    "3": "03 + sample_count(u16 BE) + count * float32 BE",
+    "4": "01 + status(u8)"
+  },
+  "status_codes": {
+    "0": "ok",
+    "1": "unknown_parameter",
+    "2": "rejected"
+  },
+  "endpoints": {
+    "client": "192.168.10.25",
+    "server": "192.168.10.5:9500"
+  },
+  "disclosure": "This document is ground truth for the test bench only. It is never given to the application; the analyst is expected to recover the layout from the bytes."
+}

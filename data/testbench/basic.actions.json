@@ -1,0 +1,37 @@
+[
+  {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "device_serial",
+      "parameter_id": 1
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.050000Z",
+    "action": "set_parameter",
+    "parameters": {
+      "parameter": "measurement_interval",
+      "parameter_id": 2,
+      "value": 20
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.100000Z",
+    "action": "get_measurements",
+    "parameters": {
+      "parameter": "measurements",
+      "count": 24,
+      "interval": 20
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.150000Z",
+    "action": "heartbeat",
+    "parameters": {},
+    "observed_result": "success"
+  }
+]

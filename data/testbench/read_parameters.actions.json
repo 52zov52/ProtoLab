@@ -1,0 +1,56 @@
+[
+  {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "param_0",
+      "parameter_id": 1
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.050000Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "param_1",
+      "parameter_id": 2
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.100000Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "param_2",
+      "parameter_id": 3
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.150000Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "param_3",
+      "parameter_id": 4
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.200000Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "param_4",
+      "parameter_id": 5
+    },
+    "observed_result": "success"
+  },
+  {
+    "timestamp": "2026-01-01T00:00:00.250000Z",
+    "action": "read_parameter",
+    "parameters": {
+      "parameter": "param_5",
+      "parameter_id": 6
+    },
+    "observed_result": "success"
+  }
+]

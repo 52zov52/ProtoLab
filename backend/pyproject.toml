@@ -1,0 +1,37 @@
+[project]
+name = "madrigal-protocol-lab-backend"
+version = "0.1.0"
+description = "Backend for Madrigal Protocol Lab - local protocol reverse engineering platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.34.0",
+    "pydantic==2.13.5",
+    "SQLAlchemy==2.0.48",
+    "alembic==1.20.0",
+    "python-multipart==0.0.20",
+    "numpy==2.3.1",
+]
+
+[project.optional-dependencies]
+analytics = [
+    "scikit-learn==1.7.0",
+    "pandas==2.3.0",
+]
+dev = [
+    "pytest==8.4.1",
+    "pytest-asyncio==1.1.0",
+    "httpx==0.28.1",
+    "bandit==1.8.6",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
