@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+
 import { useState } from "react";
 
 import {
@@ -38,7 +38,7 @@ type TimelineEvent = {
 
 export default function SessionsPage() {
   const workspace = useWorkspace();
-  const params = useSearchParams();
+
   const captureId = workspace.captureId;
   const [selected, setSelected] = useState<string | null>(workspace.sessionId);
 

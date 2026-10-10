@@ -1,6 +1,48 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Tailwind v4 is configured in CSS rather than a JS config file.
+ *
+ * The design tokens below are the laboratory's visual language: a graphite,
+ * near-black working surface with a restrained teal accent.  Colours carry
+ * meaning (status-ok/warn/bad/info) and are always paired with a text label in
+ * the UI so nothing depends on colour alone.
+ */
+
+@import "tailwindcss";
+
+@source "./app/**/*.{ts,tsx}";
+@source "./components/**/*.{ts,tsx}";
+@source "./lib/**/*.{ts,tsx}";
+
+@theme {
+  /* Graphite / near-black laboratory surface. */
+  --color-canvas: #0b0d10;
+  --color-surface: #12151a;
+  --color-surface-raised: #171b21;
+  --color-surface-sunken: #08090b;
+  --color-line: #23282f;
+  --color-line-strong: #313842;
+
+  /* Restrained teal accent. */
+  --color-accent: #3fb6c8;
+  --color-accent-dim: #1f6a76;
+  --color-accent-faint: #0e2b31;
+
+  --color-text: #d6dbe1;
+  --color-text-muted: #8d97a3;
+  --color-text-faint: #5d6772;
+
+  --color-status-ok: #4ea87a;
+  --color-status-warn: #c9a227;
+  --color-status-bad: #c9584f;
+  --color-status-info: #5b8fd6;
+  --color-status-unknown: #7b8794;
+
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+}
 
 :root {
   color-scheme: dark;

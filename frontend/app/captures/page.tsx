@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Play, Trash2, Upload } from "lucide-react";
 
 import { Badge, Caveat, EmptyState, ErrorState, Panel, Skeleton } from "@/components/ui";
@@ -22,7 +22,23 @@ export default function CapturesPage() {
     [projectId, workspace.revision],
   );
 
-  // Captures are listed through the project's own captures.
+  // The capture list. Without it an analyst who imports two captures can only
+  // ever see the last one they imported, and cannot switch between them.
+  const listed = useAsync(
+    () => (projectId ? api.projectCaptures(projectId) : Promise.resolve([])),
+    [projectId, workspace.revision],
+  );
+
+  // Select the first capture automatically so a deep link into a project lands
+  // on something useful rather than an empty panel.
+  useEffect(() => {
+    const rows = listed.data;
+    if (!workspace.captureId && rows && rows.length > 0) {
+      workspace.selectCapture(rows[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listed.data]);
+
   const sessions = useAsync(
     () =>
       workspace.captureId ? api.listSessions(workspace.captureId) : Promise.resolve(null),
@@ -117,6 +133,58 @@ export default function CapturesPage() {
                   <Line label="bytes stored" value={formatBytes(metrics.data.bytes_stored)} />
                 </dl>
               ) : null}
+            </Panel>
+
+            <Panel title="Captures in this project">
+              {listed.state === "loading" ? (
+                <Skeleton rows={3} />
+              ) : listed.state === "error" ? (
+                <ErrorState message={listed.error ?? ""} onRetry={listed.reload} />
+              ) : (listed.data ?? []).length === 0 ? (
+                <EmptyState
+                  title="No captures yet"
+                  description="Import a PCAP or PCAPNG file to begin. The original bytes are stored immutably and hashed."
+                />
+              ) : (
+                <ul className="divide-y divide-line/60">
+                  {(listed.data ?? []).map((row) => (
+                    <li key={row.id}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-raised",
+                          row.id === workspace.captureId && "bg-accent-faint",
+                        )}
+                        onClick={() => {
+                          workspace.selectCapture(row.id);
+                          workspace.invalidate();
+                        }}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-2xs font-medium text-text">
+                            {row.name}
+                          </span>
+                          <span className="block font-mono text-2xs text-text-faint">
+                            {row.format} · {formatBytes(row.file_size)} ·{" "}
+                            {row.sha256.slice(0, 12)}…
+                          </span>
+                        </span>
+                        <Badge
+                          tone={
+                            row.analysis_status === "completed"
+                              ? "ok"
+                              : row.analysis_status === "failed"
+                                ? "bad"
+                                : "neutral"
+                          }
+                        >
+                          {row.analysis_status}
+                        </Badge>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Panel>
 
             <Panel title="Selected capture">

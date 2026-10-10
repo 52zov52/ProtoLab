@@ -714,6 +714,131 @@ def scenario_two_connections(out_dir: Path) -> BenchResult:
     )
 
 
+def _tls_extension(ext_type: int, body: bytes) -> bytes:
+    return struct.pack(">HH", ext_type, len(body)) + body
+
+
+def build_client_hello(
+    *,
+    sni: str | None = "device.example.com",
+    ciphers: tuple[int, ...] = (0x1301, 0x1302, 0xC02F, 0xC030, 0x009C),
+    alpn: tuple[bytes, ...] = (b"h2", b"http/1.1"),
+    groups: tuple[int, ...] = (23, 29, 0x001D),
+    version: int = 0x0303,
+    random32: bytes = bytes(range(32)),
+) -> bytes:
+    """A ClientHello record, built so a real JA3 string can be computed from it.
+
+    The generator and the analyser share no code, and no structure is passed
+    between them: the analyser must recover the fingerprint from the bytes
+    alone, exactly as it would from a third-party capture.
+    """
+    extensions = b""
+    if sni is not None:
+        encoded = sni.encode()
+        name = struct.pack(">H", len(encoded)) + encoded
+        body = struct.pack(">H", len(encoded) + 3) + b"\x00" + name
+        extensions += _tls_extension(0x0000, body)
+    group_blob = b"".join(struct.pack(">H", g) for g in groups)
+    extensions += _tls_extension(0x000A, struct.pack(">H", len(group_blob)) + group_blob)
+    extensions += _tls_extension(0x000B, bytes([1, 0]))
+    if alpn:
+        protocols = b"".join(bytes([len(p)]) + p for p in alpn)
+        extensions += _tls_extension(0x0010, struct.pack(">H", len(protocols) + 2) + protocols)
+    extensions += _tls_extension(0x002B, struct.pack(">HH", 0x0304, 0x0303))
+    extensions += _tls_extension(0xFF01, b"\x01")
+
+    cipher_blob = b"".join(struct.pack(">H", c) for c in ciphers)
+    body = (
+        struct.pack(">H", version)
+        + random32
+        + b"\x00"
+        + struct.pack(">H", len(cipher_blob))
+        + cipher_blob
+        + b"\x01\x00"
+        + struct.pack(">H", len(extensions))
+        + extensions
+    )
+    handshake = b"\x01" + len(body).to_bytes(3, "big") + body
+    return b"\x16\x03\x01" + struct.pack(">H", len(handshake)) + handshake
+
+
+def build_server_hello(*, cipher: int = 0x1301, version: int = 0x0303) -> bytes:
+    body = (
+        struct.pack(">H", version)
+        + bytes(range(100, 132))
+        + b"\x00"
+        + struct.pack(">H", cipher)
+        + b"\x00"
+        + struct.pack(">H", 0)
+    )
+    handshake = b"\x02" + len(body).to_bytes(3, "big") + body
+    return b"\x16\x03\x03" + struct.pack(">H", len(handshake)) + handshake
+
+
+def scenario_tls_handshake(out_dir: Path) -> BenchResult:
+    """A real TLS 1.2-style handshake over TCP, plus application data.
+
+    Used to demonstrate JA3/JA3S fingerprinting, which reads the plaintext
+    handshake and therefore needs no key material.
+    """
+    writer = PcapWriter()
+    client, server = _hosts("192.168.10.25", "192.168.10.5", 52010, 443)
+    conv = Conversation(writer, client, server)
+    base = conv.clock
+    conv.handshake()
+
+    client_hello = build_client_hello()
+    server_hello = build_server_hello()
+    conv.send(client, server, client_hello)
+    conv.send(server, client, server_hello)
+    # Certificate-sized blob: opaque bytes, as any real encrypted record would be.
+    conv.send(server, client, b"\x17\x03\x03" + struct.pack(">H", 1024) + bytes(
+        (i * 37 + 11) & 0xFF for i in range(1024)
+    ))
+    conv.send(client, server, b"\x17\x03\x03" + struct.pack(">H", 64) + bytes(
+        (i * 53 + 7) & 0xFF for i in range(64)
+    ))
+    conv.close()
+    return BenchResult(
+        path=writer.write(out_dir / "tls_handshake.pcap"),
+        actions=_actions_from(
+            base,
+            [("tls_connect", {"server_port": 443, "sni": "device.example.com",
+                              "expected_result": "handshake"})],
+        ),
+        ground_truth=_truth_document(),
+        notes=(
+            "Contains a TLS ClientHello/ServerHello so JA3/JA3S can be computed from "
+            "the capture without any decryption."
+        ),
+    )
+
+
+def scenario_tls_truncated(out_dir: Path) -> BenchResult:
+    """A ClientHello cut short by a truncated capture.
+
+    The fingerprint must be reported as unreliable rather than hashed from
+    partial bytes - this is the case a hash-from-whatever-you-got tool would
+    silently get wrong.
+    """
+    writer = PcapWriter()
+    client, server = _hosts("192.168.10.25", "192.168.10.5", 52011, 443)
+    conv = Conversation(writer, client, server)
+    base = conv.clock
+    conv.handshake()
+    conv.send(client, server, build_client_hello()[:48])
+    conv.close()
+    return BenchResult(
+        path=writer.write(out_dir / "tls_truncated.pcap"),
+        actions=_actions_from(
+            base, [("tls_connect", {"server_port": 443, "expected_result": "capture_truncated"})]
+        ),
+        ground_truth=_truth_document(),
+        notes="ClientHello truncated in the capture; JA3 must be marked unreliable.",
+    )
+
+
 def scenario_pcapng(out_dir: Path) -> BenchResult:
     result = scenario_basic(out_dir, name="basic")
     ng = PcapWriter()
@@ -806,6 +931,8 @@ SCENARIOS = {
     "rst_no_syn": scenario_rst_and_no_syn,
     "unknown_status": scenario_unknown_status,
     "two_connections": scenario_two_connections,
+    "tls_handshake": scenario_tls_handshake,
+    "tls_truncated": scenario_tls_truncated,
     "pcapng": scenario_pcapng,
 }
 

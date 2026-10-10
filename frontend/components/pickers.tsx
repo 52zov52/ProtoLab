@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { Badge, EmptyState, Panel } from "@/components/ui";
 import { useAsync, useAction } from "@/hooks/use-async";

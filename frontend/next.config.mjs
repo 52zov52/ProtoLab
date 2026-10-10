@@ -4,7 +4,10 @@ const nextConfig = {
   // The frontend talks to the backend over plain HTTP on loopback only.
   // No remote images, fonts or scripts are loaded: this tool is offline-first.
   images: { unoptimized: true },
-  eslint: { ignoreDuringBuilds: true },
+  // Next.js 16 blocks dev-resource requests from origins it does not
+  // recognise. Both loopback spellings are the analyst's own machine, so they
+  // are allowed explicitly; this affects `next dev` only.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async headers() {
     return [
       {

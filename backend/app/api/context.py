@@ -1,258 +1,262 @@
-"""Контекст и вспомогательные функции для API.
+"""Request-scoped dependencies and object lookup.
 
-Обеспечивает:
-- DI контейнер для зависимостей
-- Middleware для проверки безопасности
-- Утилиты для работы с запросами и ответами
+Two responsibilities:
+
+1. **Dependency injection** - a database session, managed storage and settings
+   per request, declared as FastAPI dependencies.
+2. **Object resolution** - :func:`load_project`, :func:`load_capture` and
+   friends.  These are the enforcement point for object ownership: a path is
+   never taken from the client, only an identifier, and an object that does not
+   belong to the addressed project raises :class:`NotFound` rather than being
+   returned.  The UI hides things it should not show, but this is the control
+   that actually decides.
 """
 
 from __future__ import annotations
 
-import hashlib
-import hmac
-import secrets
-from datetime import datetime, timezone
-from typing import Any, Callable, Optional
-from urllib.parse import urlparse
+from typing import Annotated, Any, Iterator
 
-from fastapi import Request, Response, HTTPException, Depends
-from fastapi.security import HTTPBearer
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi import Depends, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..core.config import AppConfig
-from ..core.errors import AppError, SecurityViolation, RateLimited
-from ..core.security import (
-    check_host_header,
-    enforce_body_size,
-    is_cross_origin,
-    is_loopback_host,
-    SlidingWindowLimiter,
-    ConcurrencyGate,
-    validate_relative_path,
-    resolve_within,
-)
-class ClientInfo:
-    """Информация о клиенте для ограничения скорости и аудита."""
-    
-    def __init__(self, host: str, forwarded_for: Optional[str] = None):
-        self.host = host
-        self.forwarded_for = forwarded_for
-        
-        # Хэш для анонимизации при логировании
-        self._hash = self._hash_client_identity()
-    
-    def _hash_client_identity(self) -> str:
-        """Создать хэш клиента для анонимизации."""
-        components = [self.host]
-        if self.forwarded_for:
-            # Ограничить до нескольких IP адресов для баланса приватности/отладки
-            ips = self.forwarded_for.split(",")
-            components.extend(ips[:2])
-        
-        data = "|".join(sorted(components)).encode("utf-8")
-        return hashlib.sha256(data).hexdigest()[:16]
-class SecuritySettings(BaseModel):
-    """Настройки безопасности для middleware."""
-    
-    model_config = ConfigDict(extra="forbid")
-    
-    allowed_origins: list[str]
-    allowed_hosts: list[str]
-    max_json_body_bytes: int
-    require_https: bool = False
-    
-    # CSRF и сессионные настройки
-    enable_csrf: bool = False
-    csrf_token_length: int = 32
-    session_timeout_minutes: int = 60
-    
-    # Rate limiting настройки
-    rate_limit_requests: int
-    rate_limit_window_seconds: int
-class SecurityMiddlewareConfig:
-    """Конфигурация для security middleware."""
-    
-    def __init__(self, app_config: AppConfig):
-        self.settings = SecuritySettings(
-            allowed_origins=app_config.security.frontend_origins or ["*"],
-            allowed_hosts=app_config.security.allowed_hosts,
-            max_json_body_bytes=app_config.limits.max_json_body_bytes,
-            enable_csrf=app_config.mode == "team_remote",
-            rate_limit_requests=app_config.limits.rate_limit_requests,
-            rate_limit_window_seconds=app_config.limits.rate_limit_window_seconds,
-        )
-class ApiContext:
-    """Контекст API с DI контейнером для зависимостей."""
-    
+from ..core.config import Settings, get_settings as _load_settings
+from ..core.errors import NotFound
+from ..core.logging import AuditEvent
+from ..core.security import ConcurrencyGate, SlidingWindowLimiter
+from ..db.session import make_session_factory
+from ..models import Capture, ExperimentEvent, Hypothesis, Interpretation, Packet, TcpSession
+from ..services.project_service import ProjectService
+from ..services.storage import ProjectStorage
+
+
+class AppContext:
+    """Process-level collaborators built once in :func:`create_app`."""
+
     def __init__(
         self,
-        settings: AppConfig,
-        engine,
+        *,
+        settings: Settings,
+        engine: Any,
         limiter: SlidingWindowLimiter,
-        job_gate: ConcurrencyGate
-    ):
+        job_gate: ConcurrencyGate,
+    ) -> None:
         self.settings = settings
         self.engine = engine
         self.limiter = limiter
         self.job_gate = job_gate
-        
-        # Сервисы
-        self.security_config = SecurityMiddlewareConfig(settings)
-        
-        # Состояние для работы в рамках запроса
-        self._request_state: dict[str, Any] = {}
-    
-    def set_request_state(self, **kwargs) -> None:
-        """Установить состояние для текущего запроса."""
-        self._request_state.update(kwargs)
-    
-    def get_request_state(self, key: str, default: Any = None) -> Any:
-        """Получить состояние для текущего запроса."""
-        return self._request_state.get(key, default)
-    
-    def clear_request_state(self) -> None:
-        """Очистить состояние для текущего запроса."""
-        self._request_state.clear()
-# Типизированные зависимости для FastAPI
-def get_settings() -> AppConfig:
-    """Получить конфигурацию приложения (синглтон)."""
-    if not hasattr(get_settings, "_instance"):
-        get_settings._instance = AppConfig()
-    return get_settings._instance
-def get_session() -> Session:
-    """Получить сессию базы данных (оболочка для FastAPI dependency)."""
-    # В реальной реализации это был бы FastAPI dependency
-    # здесь возвращаем заглушку для компиляции
-    raise NotImplementedError("DB session dependency должен быть настроен в main.py")
-def get_limiter() -> SlidingWindowLimiter:
-    """Получить rate limiter."""
-    from ..core.security import SlidingWindowLimiter
-    return SlidingWindowLimiter(
-        limit=100,  # hardcoded для компиляции
-        window_seconds=60
-    )
-def get_job_gate() -> ConcurrencyGate:
-    """Получить ограничитель параллельных задач."""
-    return ConcurrencyGate(maximum=10)
-# Dependency инъекции для FastAPI
-def get_db_session(
-    settings: AppConfig = Depends(get_settings)
-) -> Session:
-    """Получить сессию базы данных."""
-    return get_session()
-def get_storage(
-    settings: AppConfig = Depends(get_settings)
-):
-    """Получить ProjectStorage."""
-    from ..services.storage import ProjectStorage
-    return ProjectStorage(settings.paths.data)
+        self.session_factory = make_session_factory(engine)
+        self.storage = ProjectStorage(settings.storage_dir)
+
+    def open_session(self) -> Session:
+        return self.session_factory()
+
+
+def get_context(request: Request) -> AppContext:
+    context = getattr(request.app.state, "context", None)
+    if context is None:  # pragma: no cover - only if create_app was bypassed
+        raise NotFound("The application context is not initialised.")
+    return context
+
+
+def get_settings_dep(request: Request) -> Settings:
+    """Prefer the instance handed to ``create_app`` over the process singleton.
+
+    Tests construct ``Settings`` explicitly and pass it in; reading the global
+    here would silently point the app at a different data directory.
+    """
+    context = getattr(request.app.state, "context", None)
+    if context is not None:
+        return context.settings
+    return _load_settings()
+
+
+def get_db(context: Annotated[AppContext, Depends(get_context)]) -> Iterator[Session]:
+    """A session per request, always closed."""
+    session = context.open_session()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def get_storage(context: Annotated[AppContext, Depends(get_context)]) -> ProjectStorage:
+    return context.storage
+
+
 def get_project_service(
-    session: Session = Depends(get_db_session),
-    storage = Depends(get_storage),
-    settings: AppConfig = Depends(get_settings)
-):
-    """Получить ProjectService."""
-    from ..services.project_service import ProjectService
+    session: Annotated[Session, Depends(get_db)],
+    storage: Annotated[ProjectStorage, Depends(get_storage)],
+    settings: Annotated[Settings, Depends(get_settings_dep)],
+) -> ProjectService:
     return ProjectService(session, storage, settings.limits)
-# Утилиты для работы с API
-class ApiUtils:
-    """Утилиты для работы с API."""
-    
-    @staticmethod
-    def create_request_id() -> str:
-        """Создать уникальный ID запроса."""
-        return hashlib.sha256(
-            f"{datetime.now(timezone.utc).isoformat()}-{secrets.token_hex(8)}".encode()
-        ).hexdigest()[:16]
-    
-    @staticmethod
-    def get_client_ip(request: Request) -> str:
-        """Получить IP адрес клиента с учетом X-Forwarded-For."""
-        forwarded_for = request.headers.get("x-forwarded-for")
-        if forwarded_for:
-            # Брать первый IP (реальный клиент, а не прокси)
-            ips = [ip.strip() for ip in forwarded_for.split(",")]
-            if ips:
-                return ips[0]
-        
-        # Fallback на соединение
-        if request.client:
-            return request.client.host
-        
-        return "unknown"
-    
-    @staticmethod
-    def sanitize_for_log(value: Any) -> str:
-        """Санитизировать значение для логирования."""
-        if value is None:
-            return "null"
-        
-        str_value = str(value)
-        
-        # Обрезать длинные значения
-        if len(str_value) > 1000:
-            return str_value[:1000] + "..."
-        
-        return str_value
-    
-    @staticmethod
-    def get_request_summary(request: Request) -> dict:
-        """Получить краткую информацию о запросе."""
-        return {
-            "method": request.method,
-            "path": request.url.path,
-            "query": str(request.url.query) if request.url.query else None,
-            "user_agent": request.headers.get("user-agent", "unknown"),
-            "content_type": request.headers.get("content-type", "unknown"),
-            "content_length": request.headers.get("content-length"),
-            "origin": request.headers.get("origin"),
-            "referer": request.headers.get("referer"),
-        }
-# Именованные переменные для легкой ссылки
-from ..core.errors import (
-    ValidationFailed,
-    NotFound,
-    Conflict,
-    LimitExceeded,
-    SecurityViolation,
-    RateLimited,
-    PayloadTooLarge,
-)
 
-# Имена действий для аудита
-class AuditActions:
-    PROJECT_CREATE = "project.create"
-    PROJECT_DELETE = "project.delete"
-    CAPTURE_IMPORT = "capture.import"
-    CAPTURE_DELETE = "capture.delete"
-    ANALYSIS_START = "analysis.start"
-    ANALYSIS_COMPLETE = "analysis.complete"
-    VALIDATION_RUN = "validation.run"
-    PROJECT_EXPORT = "project.export"
 
-# Типы объектов для аудита
-class AuditObjects:
-    PROJECT = "project"
-    CAPTURE = "capture"
-    SESSION = "tcp_session"
-    STREAM = "stream"
-    MESSAGE = "message"
-    HYPOTHESIS = "hypothesis"
-    INTERPRETATION = "interpretation"
-    VALIDATION_RUN = "validation_run"
+SessionDep = Annotated[Session, Depends(get_db)]
+StorageDep = Annotated[ProjectStorage, Depends(get_storage)]
+SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
+ContextDep = Annotated[AppContext, Depends(get_context)]
+ProjectServiceDep = Annotated[ProjectService, Depends(get_project_service)]
 
-# Типы рисков
-class AuditRisks:
-    INFO = "info"
-    WARNING = "warning"
-    ERROR = "error"
-    CRITICAL = "critical"
 
-# Утилиты для работы с субъектами
-class AuditActors:
-    SYSTEM = "system"
-    LOCAL_USER = "local-user"
-    SERVICE = "service"
-    API_KEY = "api-key"
-    ANONYMOUS = "anonymous"
+# --------------------------------------------------------------------------- #
+# Object resolution / ownership enforcement
+# --------------------------------------------------------------------------- #
+
+
+def load_project(session: Session, project_id: str) -> Any:
+    from ..models import Project
+
+    project = session.get(Project, project_id)
+    if project is None:
+        raise NotFound(f"Project {project_id!r} does not exist.")
+    return project
+
+
+def load_capture(session: Session, capture_id: str) -> Capture:
+    capture = session.get(Capture, capture_id)
+    if capture is None:
+        raise NotFound(f"Capture {capture_id!r} does not exist.")
+    return capture
+
+
+def load_session_row(session: Session, session_id: str) -> TcpSession:
+    row = session.get(TcpSession, session_id)
+    if row is None:
+        raise NotFound(f"TCP session {session_id!r} does not exist.")
+    return row
+
+
+def load_hypothesis(session: Session, hypothesis_id: str, project_id: str | None = None) -> Hypothesis:
+    """Resolve a hypothesis, enforcing project ownership when given."""
+    hypothesis = session.get(Hypothesis, hypothesis_id)
+    if hypothesis is None:
+        raise NotFound(f"Hypothesis {hypothesis_id!r} does not exist.")
+    if project_id is not None and hypothesis.project_id != project_id:
+        # Do not confirm existence in a project the caller did not address.
+        raise NotFound(
+            f"Hypothesis {hypothesis_id!r} does not exist in project {project_id!r}."
+        )
+    return hypothesis
+
+
+def load_interpretation(
+    session: Session, interpretation_id: str, project_id: str | None = None
+) -> Interpretation:
+    interpretation = session.get(Interpretation, interpretation_id)
+    if interpretation is None:
+        raise NotFound(f"Interpretation {interpretation_id!r} does not exist.")
+    if project_id is not None and interpretation.project_id != project_id:
+        raise NotFound(
+            f"Interpretation {interpretation_id!r} does not exist in project {project_id!r}."
+        )
+    return interpretation
+
+
+def capture_in_project(session: Session, capture_id: str, project_id: str) -> Capture:
+    """Resolve a capture only if it belongs to ``project_id``."""
+    capture = load_capture(session, capture_id)
+    if capture.project_id != project_id:
+        raise NotFound(f"Capture {capture_id!r} does not exist in project {project_id!r}.")
+    return capture
+
+
+def packet_in_capture(session: Session, capture_id: str, packet_index: int) -> Packet:
+    packet = (
+        session.execute(
+            select(Packet).where(
+                Packet.capture_id == capture_id, Packet.packet_index == packet_index
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if packet is None:
+        raise NotFound(f"Packet {packet_index} is not present in capture {capture_id!r}.")
+    return packet
+
+
+def experiments_for_project(session: Session, project_id: str) -> list[ExperimentEvent]:
+    return list(
+        session.execute(
+            select(ExperimentEvent)
+            .where(ExperimentEvent.project_id == project_id)
+            .order_by(ExperimentEvent.timestamp)
+        )
+        .scalars()
+        .all()
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Audit
+# --------------------------------------------------------------------------- #
+
+
+def project_service(session: Session, storage: ProjectStorage, limits: Any) -> ProjectService:
+    """Build a :class:`ProjectService` from explicit collaborators.
+
+    Routers call this directly instead of depending on ``ProjectServiceDep`` so
+    the same construction is available inside locally-scoped helpers.
+    """
+    return ProjectService(session, storage, limits)
+
+
+def jobs(session: Session, limits: Any) -> Any:
+    """The job service bound to one request's session."""
+    from ..services.project_service import JobService
+
+    return JobService(session, limits)
+
+
+def audit(session: Session) -> Any:
+    """The project-scoped audit log, used by routers to record events."""
+    from ..services.project_service import AuditLog
+
+    return AuditLog(session)
+
+
+def audit_event(
+    action: str,
+    *,
+    project_id: str | None = None,
+    object_type: str | None = None,
+    object_id: str | None = None,
+    details: dict[str, Any] | None = None,
+    outcome: str = "success",
+) -> AuditEvent:
+    return AuditEvent(
+        action,
+        outcome=outcome,
+        project_id=project_id,
+        object_type=object_type,
+        object_id=object_id,
+        details=details,
+    )
+
+
+__all__ = [
+    "AppContext",
+    "ContextDep",
+    "ProjectServiceDep",
+    "SessionDep",
+    "SettingsDep",
+    "StorageDep",
+    "audit",
+    "audit_event",
+    "capture_in_project",
+    "experiments_for_project",
+    "get_context",
+    "get_db",
+    "get_project_service",
+    "get_settings_dep",
+    "get_storage",
+    "jobs",
+    "load_capture",
+    "load_hypothesis",
+    "load_interpretation",
+    "load_project",
+    "load_session_row",
+    "packet_in_capture",
+    "project_service",
+]

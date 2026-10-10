@@ -36,6 +36,13 @@ const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
 const STORAGE_KEY = "mplab.workspace";
 
+/** Identifiers come from the URL, so they are validated before use. */
+const ID_PATTERN = /^[A-Za-z0-9]{1,64}$/;
+
+function validId(value: string | null): string | null {
+  return value && ID_PATTERN.test(value) ? value : null;
+}
+
 interface Persisted {
   projectId: string | null;
   projectName: string | null;
@@ -100,6 +107,55 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       /* storage unavailable; the app still works, the selection is just not sticky */
     }
   }, [state.projectId, state.projectName]);
+
+  // Deep links: honour ?project=, ?capture=, ?session=, ?stream= on first
+  // mount so a link from a report or a seeded script opens the right view.
+  // Without this, every page independently re-reads the same query parameters
+  // and the workspace never agrees with the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const project = validId(params.get("project"));
+    const capture = validId(params.get("capture"));
+    const session = validId(params.get("session"));
+    const stream = validId(params.get("stream"));
+    if (!project && !capture && !session && !stream) return;
+    setState((s) => ({
+      ...s,
+      projectId: project ?? s.projectId,
+      projectName: project ? null : s.projectName,
+      captureId: capture ?? (project ? null : s.captureId),
+      sessionId: session ?? (project ? null : s.sessionId),
+      streamId: stream ?? (project ? null : s.streamId),
+    }));
+    // Once on mount only; later navigation is driven by explicit selections.
+  }, []);
+
+  // A ?session= link carries no capture, but the stream tools need one to
+  // fetch messages. Resolve it from the session rather than showing an error
+  // the analyst cannot act on.
+  useEffect(() => {
+    const session = validId(new URLSearchParams(window.location.search).get("session"));
+    if (!session) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { api } = await import("@/lib/api");
+        const row = await api.getSession(session);
+        if (cancelled) return;
+        setState((s) => ({
+          ...s,
+          captureId: s.captureId ?? row.capture_id,
+          sessionId: s.sessionId ?? row.id,
+        }));
+      } catch {
+        // The page it links to reports the failure with the session id, which
+        // is more useful than a silent no-op here.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refreshHealth = useCallback(async () => {
     try {

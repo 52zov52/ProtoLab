@@ -1,141 +1,101 @@
-version: '3.8'
+# Madrigal Protocol Lab - local, offline-first deployment.
+#
+# Both services publish on loopback only. The backend's own Host/Origin
+# allowlist is the defence against browser attacks and DNS rebinding; binding to
+# 127.0.0.1 is what keeps it off the network.
+#
+# Note on storage: the app uses SQLite plus filesystem artefacts, NOT Postgres
+# or Redis. Those services were in an earlier draft of this file and were
+# removed because nothing in the codebase uses them - shipping a database the
+# application never connects to would imply capabilities it does not have.
 
-networks:
-  madrigal-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 127.0.0.0/24
+name: madrigal-protocol-lab
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: madrigal-backend
+    # Loopback only. Do not change to 0.0.0.0 without reading
+    # docs/SECURITY.md and setting up authentication, TLS and a reverse proxy.
     ports:
       - "127.0.0.1:8010:8010"
     environment:
-      - MPLAB_MODE=local_secure
-      - MPLAB_HOST=127.0.0.1
-      - MPLAB_PORT=8010
-      - MPLAB_ALLOWED_HOSTS=127.0.0.1,localhost
-      - MPLAB_FRONTEND_ORIGINS=http://localhost:3000
-      - MPLAB_DEBUG=false
+      MPLAB_MODE: local_secure
+      # Inside a container the process must bind every interface in its own
+      # network namespace, otherwise the published port cannot route to it.
+      # The host-side mapping below ("127.0.0.1:8010:8010") is what actually
+      # restricts reachability to the local machine.
+      MPLAB_HOST: 0.0.0.0
+      MPLAB_ALLOW_NON_LOOPBACK_BIND: "true"
+      MPLAB_PORT: 8010
+      MPLAB_DATA_DIR: /app/data
+      # The frontend is served on loopback:3000 in this compose file.
+      MPLAB_ALLOWED_HOSTS: 127.0.0.1,localhost,madrigal-backend
+      MPLAB_FRONTEND_ORIGINS: http://127.0.0.1:3000,http://localhost:3000
+      MPLAB_DEBUG: "false"
+      MPLAB_LOG_LEVEL: INFO
+      # External AI is OFF by default. Nothing leaves the machine unless an
+      # operator sets this to true and runs a local Ollama instance.
+      MPLAB_ALLOW_EXTERNAL_AI: "false"
     volumes:
-      - ./backend/data:/app/data:ro
-      - ./backend/logs:/app/logs
-    networks:
-      madrigal-net:
-        ipv4_address: 127.0.0.10
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
+      # Read-only source captures; the app writes its own artefacts elsewhere.
+      - ./data/testbench:/captures:ro
+      - mplab-data:/app/data
+    # --- hardening -------------------------------------------------------
     read_only: true
     tmpfs:
-      - /tmp
-    depends_on:
-      db:
-        condition: service_healthy
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8010/api/health', timeout=4).status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - lab
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: madrigal-frontend
     ports:
       - "127.0.0.1:3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://127.0.0.10:8010
-    networks:
-      madrigal-net:
-        ipv4_address: 127.0.0.11
-    restart: unless-stopped
+      # The browser calls the API directly (the client in lib/api.ts is
+      # browser-side). Both ports are published on the host's loopback, so this
+      # resolves on the analyst's machine and never leaves it.
+      NEXT_PUBLIC_API_BASE: http://127.0.0.1:8010
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
     security_opt:
       - no-new-privileges:true
-    read_only: true
-    depends_on:
-      - backend
-
-  db:
-    image: postgres:15-alpine
-    container_name: madrigal-db
-    environment:
-      - POSTGRES_DB=madrigal
-      - POSTGRES_USER=madrigal
-      - POSTGRES_PASSWORD=${MPLAB_DB_PASSWORD:-madrigal_secure_password}
-      - POSTGRES_INITDB_ARGS=--auth-local=trust --auth-host=md5
-    volumes:
-      - ./backend/data/db:/var/lib/postgresql/data
-      - ./backend/data/backups:/backups
-    networks:
-      madrigal-net:
-        ipv4_address: 127.0.0.12
     restart: unless-stopped
-    healthcheck:
-      test: ["cmd", "pg_isready", "-U", "madrigal", "-d", "madrigal"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  redis:
-    image: redis:7-alpine
-    container_name: madrigal-redis
-    command: redis-server --appendonly yes --requirepass ${MPLAB_REDIS_PASSWORD:-redis_secure_password}
-    volumes:
-      - ./backend/data/redis:/data
     networks:
-      madrigal-net:
-        ipv4_address: 127.0.0.13
-    restart: unless-stopped
-    healthcheck:
-      test: ["cmd", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: madrigal-prometheus
-    ports:
-      - "127.0.0.1:9090:9090"
-    volumes:
-      - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./backend/monitoring/rules:/etc/prometheus/rules
-      - prometheus_data:/prometheus
-    networks:
-      madrigal-net:
-        ipv4_address: 127.0.0.14
-    restart: unless-stopped
-    profiles:
-      - monitoring
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: madrigal-grafana
-    ports:
-      - "127.0.0.1:3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=madrigal_grafana_admin
-    volumes:
-      - ./backend/monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - grafana_data:/var/lib/grafana
-    networks:
-      madrigal-net:
-        ipv4_address: 127.0.0.15
-    restart: unless-stopped
-    profiles:
-      - monitoring
+      - lab
 
 volumes:
-  prometheus_data:
-  grafana_data:
+  # SQLite database, capture artefacts and exports. Deleting a project through
+  # the UI removes only that project's subtree.
+  mplab-data:
 
-profiles:
-  local:
-    services:
-      db:
-      redis:
-      prometheus:
-      grafana:
-  monitoring:
-    services:
-      prometheus:
-      grafana:
+networks:
+  lab:
+    driver: bridge

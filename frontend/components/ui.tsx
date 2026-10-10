@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { cn, toneClasses, type StatusTone } from "@/lib/format";
 
@@ -159,6 +159,14 @@ export function Metric({
   );
 }
 
+/**
+ * A two-step control for destructive actions.
+ *
+ * The first click arms the button and swaps the label to `confirmLabel`;
+ * only a second click calls `onConfirm`. Clicking elsewhere, or waiting,
+ * disarms it. A single-click destructive button is a mis-click waiting to
+ * delete an investigation, so the confirmation is not optional.
+ */
 export function ConfirmButton({
   label,
   confirmLabel,
@@ -172,16 +180,49 @@ export function ConfirmButton({
   tone?: string;
   disabled?: boolean;
 }) {
+  const [armed, setArmed] = useState(false);
+
+  // Disarm on the next tick unless the user confirms, so the button cannot
+  // stay armed after the pointer leaves it.
+  useEffect(() => {
+    if (!armed) return;
+    const timer = window.setTimeout(() => setArmed(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [armed]);
+
+  if (armed) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <button
+          type="button"
+          className={cn("btn", tone)}
+          onClick={() => {
+            setArmed(false);
+            onConfirm();
+          }}
+        >
+          {confirmLabel}
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => setArmed(false)}
+          title="Cancel"
+        >
+          Cancel
+        </button>
+      </span>
+    );
+  }
+
   return (
-    <span className="inline-flex items-center gap-1">
-      <button
-        type="button"
-        className={cn("btn", tone)}
-        disabled={disabled || undefined}
-        onClick={onConfirm}
-      >
-        {label}
-      </button>
-    </span>
+    <button
+      type="button"
+      className={cn("btn", tone)}
+      disabled={disabled || undefined}
+      onClick={() => setArmed(true)}
+    >
+      {label}
+    </button>
   );
 }

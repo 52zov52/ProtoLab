@@ -133,8 +133,23 @@ def _warn_on_remote_bind(settings: Settings) -> None:
     In local secure mode a non-loopback bind is a configuration mistake, so it is
     surfaced loudly at startup and again in the Security Center, rather than
     being quietly accepted.
+
+    The one legitimate exception is a container: the process must bind 0.0.0.0
+    *inside its own network namespace* for a published port to reach it, while
+    the host-side port mapping is what actually restricts reachability. The
+    operator records that with ``MPLAB_ALLOW_NON_LOOPBACK_BIND``; it changes
+    the severity of this message, never the reachability.
     """
     if is_loopback_host(settings.host):
+        return
+    if settings.allow_non_loopback_bind:
+        log.warning(
+            "The API binds %s inside what is assumed to be a container network "
+            "namespace (MPLAB_ALLOW_NON_LOOPBACK_BIND=true). This is only safe "
+            "while the port is published to loopback on the host; verify the "
+            "publish mapping before exposing it to a network.",
+            settings.host,
+        )
         return
     message = (
         "SECURITY: the API is configured to listen on %s, which is reachable from "
@@ -148,6 +163,24 @@ def _warn_on_remote_bind(settings: Settings) -> None:
         log.warning(message)
     else:
         log.error(message)
+
+
+def _apply_cors(response, origin: str | None) -> None:
+    """Emit CORS headers for an origin that has already been allow-listed.
+
+    Only the exact origin is echoed - never ``*`` - and ``Vary: Origin`` is set
+    so a shared cache cannot serve one origin's response to another.
+    Credentials are never enabled: the API is token-less by design and must not
+    become a credential-bearing cross-origin surface.
+    """
+    if not origin:
+        return
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Vary"] = "Origin"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Accept, Content-Type, Content-Length"
+    response.headers["Access-Control-Max-Age"] = "600"
+    response.headers["Access-Control-Expose-Headers"] = "X-Request-Duration-Ms"
 
 
 def _install_middleware(app: FastAPI, settings: Settings) -> None:
@@ -191,6 +224,15 @@ def _install_middleware(app: FastAPI, settings: Settings) -> None:
                         "State-changing request rejected by the origin check."
                     )
 
+            # CORS preflight.  The browser sends OPTIONS without a body and
+            # without the real request, so it must be answered here or the
+            # frontend cannot call the API at all.  It is answered only after
+            # the Host and Origin checks above, so this is not a bypass.
+            if request.method == "OPTIONS" and origin_matches(origin, allowed_origins):
+                response = JSONResponse(status_code=204, content=None)
+                _apply_cors(response, origin)
+                return response
+
             enforce_body_size(
                 request.headers.get("content-length"), settings.limits.max_json_body_bytes
             )
@@ -217,6 +259,12 @@ def _install_middleware(app: FastAPI, settings: Settings) -> None:
             )
 
         elapsed_ms = (time.perf_counter() - started) * 1000
+        # The browser UI is served from a different port than the API, so every
+        # response the allow-listed origin is allowed to read needs the CORS
+        # headers.  Without them the browser blocks the response body even
+        # though the Origin check above passed.
+        if origin_matches(request.headers.get("origin"), allowed_origins):
+            _apply_cors(response, request.headers.get("origin"))
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"

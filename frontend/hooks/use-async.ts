@@ -32,7 +32,13 @@ export function useAsync<T>(
   const [nonce, setNonce] = useState(0);
   const active = useRef(true);
   const loaderRef = useRef(loader);
-  loaderRef.current = loader;
+
+  // Assign in an effect rather than during render: writing a ref while
+  // rendering is a React anti-pattern (it mutates state a concurrent render
+  // may never commit).
+  useEffect(() => {
+    loaderRef.current = loader;
+  });
 
   useEffect(() => {
     active.current = true;

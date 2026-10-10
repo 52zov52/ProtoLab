@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
 from sqlalchemy import func, select
 
 from ...core.errors import NotFound
@@ -245,6 +245,68 @@ def export_project(
         include_reports=payload.include_reports,
     )
     return result
+
+
+@router.post("/projects/import")
+async def import_project(
+    session: SessionDep,
+    storage: StorageDep,
+    file: Annotated[UploadFile, File()],
+    name: Annotated[str | None, Form()] = None,
+) -> dict:
+    """Import a ``.mplab`` project archive into a **new** project.
+
+    The archive is treated as untrusted input: it is streamed to a temporary
+    file under a size ceiling, then validated (manifest schema, entry paths,
+    entry count, compression ratio, per-file hashes) before anything is
+    committed.  An existing project is never overwritten.
+    """
+    import shutil
+    import tempfile
+    from pathlib import Path
+
+    from ...core.errors import LimitExceeded
+    from ...core.logging import AuditEvent, get_logger
+    from ...core.security import safe_display_filename
+    from ...services.project_archive import import_project_archive
+    from ..context import project_service
+    from ...core.config import get_settings
+
+    log = get_logger("mplab.projects")
+    settings = get_settings()
+    limits = settings.limits
+
+    display = safe_display_filename(file.filename, fallback="project.mplab")
+    written = 0
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mplab") as handle:
+            temp_path = Path(handle.name)
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > limits.max_archive_entry_bytes:
+                    raise LimitExceeded(
+                        "The uploaded archive exceeds the maximum accepted size.",
+                        details={"limit_bytes": limits.max_archive_entry_bytes},
+                    )
+                handle.write(chunk)
+        return import_project_archive(
+            temp_path,
+            session,
+            storage,
+            limits,
+            name_override=(name or None) if name else None,
+        )
+    finally:
+        if temp_path is not None and temp_path.exists():
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:  # pragma: no cover - cleanup best effort
+                log.warning("could not remove the temporary archive %s", temp_path)
+    _ = (AuditEvent, display, project_service)
 
 
 @router.get("/projects/{project_id}/hypotheses/{hypothesis_id}", response_model=HypothesisOut)

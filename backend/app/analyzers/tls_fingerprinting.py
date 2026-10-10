@@ -160,14 +160,29 @@ def _parse_client_hello(payload: bytes, offset: int, record_version: int, trunca
     cursor += 32  # random
     session_len = payload[cursor]
     cursor += 1 + session_len
+    # Every length read below is bounds-checked: a capture truncated mid-record
+    # must yield an incomplete handshake with a diagnostic, never a crash and
+    # never a hash computed from bytes that were not fully captured.
+    if cursor + 2 > len(payload):
+        hs.complete = False
+        hs.parse_errors.append("ClientHello ended before the cipher suite list")
+        return hs
     cipher_len = struct.unpack_from(">H", payload, cursor)[0]
     cursor += 2
     if cipher_len % 2:
         raise TlsParseError("cipher suite list length is odd")
+    if cursor + cipher_len > len(payload):
+        hs.complete = False
+        hs.parse_errors.append("ClientHello ended inside the cipher suite list")
+        return hs
     hs.cipher_suites = list(
         struct.unpack_from(f">{cipher_len // 2}H", payload, cursor)
     )
     cursor += cipher_len
+    if cursor >= len(payload):
+        hs.complete = False
+        hs.parse_errors.append("ClientHello ended before the compression methods")
+        return hs
     compression_len = payload[cursor]
     cursor += 1 + compression_len
     if truncated or cursor >= len(payload):
@@ -244,6 +259,12 @@ def _parse_server_hello(payload: bytes, offset: int, record_version: int, trunca
     cursor = 2 + 32
     session_len = payload[cursor]
     cursor += 1 + session_len
+    # Bounds-checked for the same reason as the ClientHello parser: a truncated
+    # record must degrade to an incomplete handshake, not raise.
+    if cursor + 3 > len(payload):
+        hs.complete = False
+        hs.parse_errors.append("ServerHello ended before the cipher suite")
+        return hs
     hs.cipher_suites = [struct.unpack_from(">H", payload, cursor)[0]]
     cursor += 2
     cursor += 1  # compression method

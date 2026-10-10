@@ -35,7 +35,7 @@ export default function ReportsPage() {
   );
 
   const current = useAsync(
-    () => (selectedId ? api.report(selectedId) : Promise.resolve(null)),
+    () => (selectedId ? api.getReport(selectedId) : Promise.resolve(null)),
     [selectedId],
   );
 

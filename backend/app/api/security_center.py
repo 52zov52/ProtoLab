@@ -101,6 +101,24 @@ def _check_bind_address(settings: Settings) -> Check:
             "Set MPLAB_HOST=127.0.0.1 and place a hardened reverse proxy in front, or "
             "return to local secure mode.",
         )
+    if settings.allow_non_loopback_bind:
+        # A container must bind every interface *inside its own namespace* for
+        # the published port to route to it. That is not the same exposure as
+        # binding a host interface, but this check cannot see the container's
+        # port mapping, so it reports what it can verify and no more.
+        return Check(
+            "bind_address",
+            "API binds to loopback only",
+            "unknown",
+            (
+                f"The API listens on {host} and MPLAB_ALLOW_NON_LOOPBACK_BIND is set, "
+                "which normally means a container network namespace where the host-side "
+                "port mapping is the real boundary. This check cannot inspect that "
+                "mapping, so reachability from other machines is UNVERIFIED here."
+            ),
+            {"host": host, "allow_non_loopback_bind": True},
+            "Verify that the container's published port maps to 127.0.0.1 on the host.",
+        )
     return Check(
         "bind_address",
         "API binds to loopback only",

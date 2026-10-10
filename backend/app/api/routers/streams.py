@@ -8,17 +8,18 @@ from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
 from ...analyzers.byte_analysis import align_messages, group_by_length, hexdump
-from ...analyzers.capture_reader import describe_flags
 from ...analyzers.framing import FramingConfig, suggest_framing
-from ...analyzers.tcp_reassembly import summarise_timeline
 from ...core.errors import NotFound
-from ...models import Capture, Message, Packet, Stream, TcpSession
-from ...schemas import CompareRequest, MessageOut, SessionOut, StreamOut
-from ..context import SessionDep, StorageDep, load_capture, load_project
+from ...models import Capture, Message, Stream, TcpSession
+from ...schemas import CompareRequest, MessageOut, StreamOut
+from ..context import SessionDep, StorageDep, load_capture
 
 router = APIRouter()
 
 MAX_HEX_BYTES = 65536
+# A TLS handshake sits at the head of a stream; scanning further would waste
+# memory on bulk ciphertext without finding another handshake.
+MAX_TLS_SCAN_BYTES = 256 * 1024
 
 
 def _store(capture: Capture, storage):
@@ -34,100 +35,6 @@ def _load_stream(session, stream_id: str) -> Stream:
     if stream is None:
         raise NotFound(f"Stream {stream_id!r} does not exist.")
     return stream
-
-
-# --------------------------------------------------------------------------- #
-# Sessions
-# --------------------------------------------------------------------------- #
-
-
-@router.get("/sessions/{session_id}", response_model=SessionOut)
-def get_session(session_id: str, session: SessionDep) -> TcpSession:
-    row = session.get(TcpSession, session_id)
-    if row is None:
-        raise NotFound(f"TCP session {session_id!r} does not exist.")
-    return row
-
-
-@router.get("/sessions/{session_id}/streams", response_model=list[StreamOut])
-def session_streams(session_id: str, session: SessionDep) -> list[Stream]:
-    row = session.get(TcpSession, session_id)
-    if row is None:
-        raise NotFound(f"TCP session {session_id!r} does not exist.")
-    return list(
-        session.execute(select(Stream).where(Stream.session_id == session_id))
-        .scalars()
-        .all()
-    )
-
-
-@router.get("/sessions/{session_id}/timeline")
-def session_timeline(session_id: str, session: SessionDep, storage: StorageDep) -> dict:
-    """Observed TCP events, per direction, as a simplified state diagram.
-
-    This is a visualisation of *observed* events, not a reconstruction of the
-    peer's TCP state machine.
-    """
-    row = session.get(TcpSession, session_id)
-    if row is None:
-        raise NotFound(f"TCP session {session_id!r} does not exist.")
-    capture = load_capture(session, row.capture_id)
-    paths, store = _store(capture, storage)
-    if not store.available:
-        raise NotFound(
-            "This capture has not been analysed yet, so no reconstructed stream "
-            "artefact exists."
-        )
-    packets = (
-        session.execute(
-            select(Packet)
-            .where(
-                Packet.capture_id == capture.id,
-                Packet.transport_protocol == "tcp",
-            )
-            .order_by(Packet.packet_index)
-        )
-        .scalars()
-        .all()
-    )
-    endpoints = {row.endpoint_a, row.endpoint_b}
-    events: list[dict] = []
-    for packet in packets:
-        src = f"{packet.source_address}:{packet.source_port}"
-        dst = f"{packet.destination_address}:{packet.destination_port}"
-        if src not in endpoints and dst not in endpoints:
-            continue
-        events.append(
-            {
-                "packet_index": packet.packet_index,
-                "timestamp": packet.timestamp,
-                "direction": "a2b" if src == row.endpoint_a else "b2a",
-                "source": src,
-                "destination": dst,
-                "sequence": packet.tcp_sequence,
-                "acknowledgment": packet.tcp_acknowledgment,
-                "flags": packet.tcp_flags or 0,
-                "flags_text": describe_flags(packet.tcp_flags or 0),
-                "window": packet.tcp_window,
-                "payload_length": packet.payload_length,
-                "options": packet.tcp_options,
-            }
-        )
-    return {
-        "session_id": session_id,
-        "completeness": row.completeness_status,
-        "role_confidence": row.role_confidence,
-        "role_rationale": (row.diagnostics or {}).get("role_rationale", ""),
-        "saw_syn": "SYN" in "".join(e["flags_text"] for e in events),
-        "saw_fin": any("FIN" in e["flags_text"] for e in events),
-        "saw_rst": any("RST" in e["flags_text"] for e in events),
-        "events": events,
-        "disclaimer": (
-            "This timeline shows events observed in the capture. It does not prove "
-            "the internal state of either TCP stack, and packets absent from the "
-            "capture are simply unknown."
-        ),
-    }
 
 
 # --------------------------------------------------------------------------- #
@@ -174,6 +81,58 @@ def stream_bytes(
         "coverage": rebuilt.coverage(),
         "lines": lines,
         "packet_references": rebuilt.packet_references(offset, length),
+    }
+
+
+@router.get("/streams/{stream_id}/tls")
+def stream_tls_fingerprints(stream_id: str, session: SessionDep, storage: StorageDep) -> dict:
+    """JA3 / JA3S fingerprints observed in one reconstructed stream.
+
+    Fingerprinting reads the plaintext handshake bytes, so it works on an
+    encrypted session and needs no key material.  A handshake that was truncated
+    in the capture is reported with ``reliable: false`` and no hash rather than
+    being hashed from partial bytes.
+    """
+    from ...analyzers.tls_fingerprinting import (
+        BASE_VERSION,
+        summarise_handshakes,
+    )
+
+    stream_row = _load_stream(session, stream_id)
+    capture = load_capture(session, _capture_id(session, stream_row))
+    paths, store = _store(capture, storage)
+    if not store.available:
+        raise NotFound("The reconstructed stream artefact is missing.")
+    descriptor = store.get(stream_id)
+    if descriptor is None:
+        raise NotFound(f"Stream {stream_id!r} has no artefact entry.")
+    descriptor.capture_id = capture.id
+    rebuilt = store.build(descriptor)
+
+    # Scan the head of the stream: a handshake lives at the start of a TLS
+    # session, so the whole stream is never loaded into memory.
+    window = rebuilt.contiguous_bytes(0, min(rebuilt.stream_length, MAX_TLS_SCAN_BYTES))
+    handshakes: list[dict] = []
+    for offset, chunk in window:
+        for record in summarise_handshakes(chunk, base_offset=offset):
+            record["packet_references"] = rebuilt.packet_references(
+                int(record.get("offset_in_stream") or offset), 1
+            )
+            handshakes.append(record)
+
+    return {
+        "stream_id": stream_id,
+        "capture_id": capture.id,
+        "handshakes": handshakes,
+        "count": len(handshakes),
+        "fingerprint_database": BASE_VERSION,
+        "interpretation_note": (
+            "A hash present in the local database means this hash is published for that "
+            "client family. It is not proof of the implementation language and never an "
+            "indication of maliciousness. A missing or unreliable fingerprint means the "
+            "handshake was absent or truncated in this capture, not that the traffic was "
+            "not TLS."
+        ),
     }
 
 
@@ -389,4 +348,4 @@ def field_statistics(
     }
 
 
-_ = (FramingConfig, summarise_timeline, load_project)
+_ = FramingConfig

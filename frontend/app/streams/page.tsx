@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -60,6 +61,11 @@ export default function StreamsPage() {
     [streamId, workspace.revision],
   );
 
+  const tls = useAsync(
+    () => (streamId ? api.tlsFingerprints(streamId) : Promise.resolve(null)),
+    [streamId, workspace.revision],
+  );
+
   const apply = useAction();
 
   useEffect(() => {
@@ -89,6 +95,19 @@ export default function StreamsPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {sessionId ? null : (
+          <div className="p-4">
+            <EmptyState
+              title="No TCP session selected"
+              description="The Stream Explorer works on one reconstructed direction of one TCP session. Open TCP Sessions to choose the connection, or import and analyse a capture first."
+              action={
+                <Link href="/sessions" className="btn btn-primary">
+                  Go to TCP Sessions
+                </Link>
+              }
+            />
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-1.5">
           {(streams.data ?? []).map((s) => (
             <button
@@ -184,6 +203,67 @@ export default function StreamsPage() {
                 </div>
               </Panel>
             )}
+
+            {tls.state === "ready" &&
+              ((tls.data?.handshakes ?? []) as Record<string, unknown>[]).length > 0 && (
+                <Panel title="TLS fingerprints (JA3 / JA3S)">
+                  <div className="space-y-2 p-3">
+                    {(
+                      (tls.data?.handshakes ?? []) as Record<string, unknown>[]
+                    ).map((handshake, index) => (
+                      <div
+                        key={index}
+                        className="space-y-1 rounded-sm border border-line bg-surface-raised p-2 font-mono text-2xs"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge tone="info">{String(handshake.kind)}</Badge>
+                          {/* A truncated handshake is reported as such and never hashed. */}
+                          <Badge tone={handshake.reliable ? "ok" : "warn"}>
+                            {handshake.reliable ? "reliable" : "unreliable"}
+                          </Badge>
+                          <span className="text-text">
+                            {String(handshake.md5 ?? "no hash computed")}
+                          </span>
+                          <span className="text-text-faint">
+                            {String(handshake.version ?? "")}
+                          </span>
+                        </div>
+                        <div className="break-all text-text-muted">
+                          {String(handshake.raw ?? "")}
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-text-faint">
+                          {handshake.sni ? <span>sni: {String(handshake.sni)}</span> : null}
+                          {Array.isArray(handshake.alpn) && handshake.alpn.length ? (
+                            <span>alpn: {handshake.alpn.join(", ")}</span>
+                          ) : null}
+                          {Array.isArray(handshake.supported_groups) &&
+                          handshake.supported_groups.length ? (
+                            <span>
+                              groups:{" "}
+                              {(handshake.supported_groups as number[])
+                                .map((g) => `0x${g.toString(16)}`)
+                                .join(", ")}
+                            </span>
+                          ) : null}
+                        </div>
+                        {!handshake.reliable ? (
+                          <p className="text-status-warn">
+                            {String(handshake.reason_if_unreliable ?? "")}
+                          </p>
+                        ) : null}
+                        {handshake.match ? (
+                          <p className="text-text-muted">
+                            {String((handshake.match as { interpretation?: string }).interpretation ?? "")}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                    <Caveat>
+                      {String(tls.data?.interpretation_note ?? "")}
+                    </Caveat>
+                  </div>
+                </Panel>
+              )}
 
             <Panel title="Framing candidates for this stream">
               {suggestions.state === "loading" ? (

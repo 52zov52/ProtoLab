@@ -1,21 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Download, HardDrive, Loader2, Upload, Wifi, WifiOff } from "lucide-react";
 
-import { Sidebar, NAV } from "@/components/sidebar";
 import { Badge } from "@/components/ui";
 import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/format";
+
 
 export function TopBar() {
   const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
   const workspace = useWorkspace();
   const [query, setQuery] = useState("");
 
@@ -32,15 +29,10 @@ export function TopBar() {
   const importAction = useAction();
   const [importMessage, setImportMessage] = useState<string | null>(null);
 
-  // Re-evaluate the active nav entry when the query string changes.
-  const [active, setActive] = useState(pathname);
-  useEffect(() => setActive(pathname), [pathname]);
-
   const runExport = async () => {
-    if (!workspace.projectId) return;
-    const result = await exportAction.run(() =>
-      api.exportProject(workspace.projectId),
-    );
+    const projectId = workspace.projectId;
+    if (!projectId) return;
+    const result = await exportAction.run(() => api.exportProject(projectId));
     if (result) {
       setImportMessage(
         `Archive written: ${String(result.archive)} (${String(result.bytes)} bytes)`,
@@ -186,5 +178,3 @@ export function PageHeader({
     </div>
   );
 }
-
-export { NAV, cn, usePathname, useSearchParams, Link };

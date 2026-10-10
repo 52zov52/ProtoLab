@@ -61,8 +61,30 @@ export default function GraphPage() {
     [captures.data, projectId],
   );
 
-  const nodes = ((graph.data?.nodes ?? []) as Node[]) ?? [];
-  const edges = ((graph.data?.edges ?? []) as Edge[]) ?? [];
+  // Memoised so the fallback array is not a fresh reference on every render,
+  // which would invalidate every downstream memo.
+  const allNodes = useMemo(
+    () => ((graph.data?.nodes ?? []) as Node[]) ?? [],
+    [graph.data],
+  );
+  const allEdges = useMemo(
+    () => ((graph.data?.edges ?? []) as Edge[]) ?? [],
+    [graph.data],
+  );
+
+  // The traffic filter is applied client-side so the operator can narrow the
+  // view without re-running the analysis. Hiding a node also hides any edge
+  // that depended on it: an edge to an invisible endpoint would be a claim
+  // about traffic the filter has excluded.
+  const nodes = useMemo(
+    () => (minBytes > 0 ? allNodes.filter((n) => n.bytes_total >= minBytes) : allNodes),
+    [allNodes, minBytes],
+  );
+  const visibleIds = useMemo(() => new Set(nodes.map((n) => n.id)), [nodes]);
+  const edges = useMemo(
+    () => allEdges.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target)),
+    [allEdges, visibleIds],
+  );
 
   const layout = useMemo(() => {
     // A deterministic circular layout: reproducible across renders, which a
@@ -108,6 +130,34 @@ export default function GraphPage() {
           Edges exist only where traffic was actually observed. Node size reflects
           observed volume; centrality is a triage aid, not an accusation.
         </p>
+      </div>
+
+      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line px-4 py-2">
+        <label className="flex items-center gap-2 text-2xs text-text-muted">
+          <span className="uppercase tracking-wider">Min traffic</span>
+          <input
+            type="number"
+            min={0}
+            step={64}
+            value={minBytes}
+            onChange={(event) => setMinBytes(Math.max(0, Number(event.target.value) || 0))}
+            className="input w-28"
+          />
+          <span>bytes</span>
+        </label>
+        <span className="text-2xs text-text-faint">
+          {nodes.length} of {allNodes.length} endpoints shown · {edges.length} of{" "}
+          {allEdges.length} interactions
+        </span>
+        {minBytes > 0 && (
+          <button type="button" className="btn" onClick={() => setMinBytes(0)}>
+            Clear filter
+          </button>
+        )}
+        <Caveat>
+          Filtering hides endpoints below the threshold, and any interaction with
+          them. It does not change the underlying analysis.
+        </Caveat>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto p-3 lg:grid-cols-[1fr_340px]">

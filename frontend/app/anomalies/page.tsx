@@ -23,6 +23,8 @@ export default function AnomaliesPage() {
 
   const status = useAsync(() => api.anomaliesStatus(), []);
   const action = useAction();
+  /** The most recently trained model, shown verbatim so the operator can audit it. */
+  const [latest, setLatest] = useState<Record<string, unknown> | null>(null);
 
   if (!projectId) {
     return (

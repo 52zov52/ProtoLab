@@ -266,6 +266,44 @@ const json = (body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
+/**
+ * Fetch a plain-text endpoint (Markdown/JSON exports).
+ *
+ * Errors are unwrapped the same way `request` does, so a failed export shows
+ * the backend's message rather than a raw response body.
+ */
+async function fetchText(path: string): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      cache: "no-store",
+      headers: { Accept: "text/plain" },
+    });
+  } catch (cause) {
+    throw new ApiError(
+      0,
+      "backend_unreachable",
+      `The backend at ${API_BASE} did not respond. Is it running?`,
+      String(cause),
+    );
+  }
+  const text = await response.text();
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}.`;
+    try {
+      const body = JSON.parse(text) as {
+        error?: { message?: string };
+        detail?: string;
+      };
+      message = body.error?.message ?? body.detail ?? message;
+    } catch {
+      /* keep the generic message for a non-JSON error body */
+    }
+    throw new ApiError(response.status, "http_error", message, null);
+  }
+  return text;
+}
+
 export const api = {
   health: () => request("/api/health", z.record(z.string(), z.unknown())),
 
@@ -351,6 +389,12 @@ export const api = {
     ),
 
   // -- sessions / streams ----------------------------------------------
+  /** One TCP session. Also resolves which capture a ?session= link belongs to. */
+  getSession: (sessionId: string) =>
+    request(
+      `/api/sessions/${assertId(sessionId, "session_id")}`,
+      SessionSchema,
+    ),
   timeline: (sessionId: string) =>
     request(
       `/api/sessions/${assertId(sessionId, "session_id")}/timeline`,
@@ -428,6 +472,12 @@ export const api = {
   fieldStatistics: (streamId: string) =>
     request(
       `/api/streams/${assertId(streamId, "stream_id")}/field-statistics`,
+      z.record(z.string(), z.unknown()),
+    ),
+  /** JA3/JA3S observed in a stream. Works on encrypted sessions; needs no keys. */
+  tlsFingerprints: (streamId: string) =>
+    request(
+      `/api/streams/${assertId(streamId, "stream_id")}/tls`,
       z.record(z.string(), z.unknown()),
     ),
 
@@ -555,6 +605,14 @@ export const api = {
       `/api/projects/${assertId(projectId, "project_id")}/reports`,
       z.array(z.record(z.string(), z.unknown())),
     ),
+  /** Fetch one generated report by id (the stored result, not a new run). */
+  getReport: (reportId: string) =>
+    request(
+      `/api/reports/${assertId(reportId, "report_id")}`,
+      z.record(z.string(), z.unknown()),
+    ),
+  reportMarkdown: (reportId: string) =>
+    fetchText(`/api/reports/${assertId(reportId, "report_id")}/markdown`),
   exportProject: (projectId: string) =>
     request(
       `/api/projects/${assertId(projectId, "project_id")}/export`,

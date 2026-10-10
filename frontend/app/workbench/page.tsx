@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -38,7 +39,6 @@ export default function WorkbenchPage() {
 
   const [streamId, setStreamId] = useState<string | null>(workspace.streamId);
   const [selected, setSelected] = useState<string[]>([]);
-  const [directionFilter, setDirectionFilter] = useState<string>("all");
 
   const streams = useAsync(
     () => (sessionId ? api.sessionStreams(sessionId) : Promise.resolve(null)),
@@ -64,11 +64,10 @@ export default function WorkbenchPage() {
   }, [streamId, selected.join(",")]);
 
   const rows = ((messages.data?.items ?? []) as unknown as MessageRow[]) ?? [];
-  const filtered =
-    directionFilter === "all"
-      ? rows
-      : (streams.data ?? []).filter((s) => s.id === streamId) &&
-        rows;
+  // Direction is selected by choosing the stream above: each stream is one
+  // direction of the session, so filtering by direction again would be
+  // redundant. Messages shown are exactly the selected stream's messages.
+  const filtered = rows;
 
   const toggle = (id: string) => {
     setSelected((current) => {
@@ -83,7 +82,12 @@ export default function WorkbenchPage() {
       <div className="p-4">
         <EmptyState
           title="No capture selected"
-          description="The Protocol Workbench compares framed messages from a reconstructed stream."
+          description="The Protocol Workbench compares framed messages from a reconstructed stream. Select an analysed capture and a session, then apply a framing rule to the stream."
+          action={
+            <Link href="/captures" className="btn btn-primary">
+              Go to Captures
+            </Link>
+          }
         />
       </div>
     );
@@ -136,9 +140,9 @@ export default function WorkbenchPage() {
               {s.direction}
             </button>
           ))}
-          {directionFilter !== "all" && (
-            <span className="text-2xs text-text-faint">filter: {directionFilter}</span>
-          )}
+          <span className="text-2xs text-text-faint">
+            one stream per direction
+          </span>
         </div>
       </div>
 

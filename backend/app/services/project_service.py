@@ -16,7 +16,13 @@ from typing import Any, Iterator
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from ..core.errors import Conflict, LimitExceeded, NotFound, ValidationFailed
+from ..core.errors import (
+    Conflict,
+    LimitExceeded,
+    NotFound,
+    SemanticValidationFailed,
+    ValidationFailed,
+)
 from ..core.logging import GENESIS_HASH, AuditEvent, canonical_json, get_logger, hash_chain
 from ..core.security import sha256_file
 from ..models import (
@@ -435,13 +441,13 @@ class ProjectService:
         for item in events:
             timestamp = _coerce_timestamp(item.get("timestamp"))
             if timestamp is None:
-                raise ValidationFailed(
+                raise SemanticValidationFailed(
                     "Every experiment event needs a parseable 'timestamp'.",
                     details={"received": str(item.get("timestamp"))[:64]},
                 )
             parameters = item.get("parameters") or item.get("parameter") or {}
             if not isinstance(parameters, dict):
-                raise ValidationFailed("'parameters' must be an object.")
+                raise SemanticValidationFailed("'parameters' must be an object.")
             event = ExperimentEvent(
                 project_id=project.id,
                 timestamp=timestamp,
