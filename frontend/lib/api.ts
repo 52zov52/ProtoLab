@@ -382,6 +382,37 @@ export const api = {
       `/api/captures/${assertId(captureId, "capture_id")}/packets${query}`,
       PageSchema,
     ),
+  /** Original on-disk bytes of one packet, served from the immutable file. */
+  async packetBytes(captureId: string, packetIndex: number): Promise<Uint8Array> {
+    let response: Response;
+    try {
+      response = await fetch(
+        `${API_BASE}/api/captures/${assertId(captureId, "capture_id")}/packets/${packetIndex}/raw`,
+        { cache: "no-store", headers: { Accept: "application/octet-stream" } },
+      );
+    } catch (cause) {
+      throw new ApiError(
+        0,
+        "backend_unreachable",
+        `The backend at ${API_BASE} did not respond. Is it running?`,
+        String(cause),
+      );
+    }
+    if (!response.ok) {
+      let message = `Request failed with status ${response.status}.`;
+      try {
+        const body = (await response.json()) as {
+          error?: { message?: string };
+          detail?: string;
+        };
+        message = body.error?.message ?? body.detail ?? message;
+      } catch {
+        /* keep the generic message for a non-JSON error body */
+      }
+      throw new ApiError(response.status, "http_error", message, null);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  },
   deleteCapture: (id: string) =>
     request(`/api/captures/${assertId(id, "capture_id")}`, z.unknown(), {
       method: "DELETE",

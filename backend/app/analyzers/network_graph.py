@@ -6,8 +6,13 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-GRAPH_VERSION = "network-graph/1.1"
+GRAPH_VERSION = "network-graph/1.2"
 MAX_NODES = 2000
+
+#: Thresholds that mark a node as a *candidate* for further review.  They make
+#: no statement about intent; a bus master in a machine network trips them too.
+HUB_BETWEENNESS_MIN = 0.1
+HUB_DEGREE_CENTRALITY_MIN = 0.3
 
 
 @dataclass
@@ -24,6 +29,8 @@ class Node:
     betweenness: float | None = None
     protocols: set[str] = field(default_factory=set)
     sessions: list[str] = field(default_factory=list)
+    hub_candidate: bool = False
+    hub_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -42,6 +49,8 @@ class Node:
             ),
             "protocols": sorted(self.protocols),
             "session_ids": self.sessions[:64],
+            "hub_candidate": self.hub_candidate,
+            "hub_reason": self.hub_reason,
         }
 
 
@@ -91,9 +100,10 @@ class Graph:
             "warnings": self.warnings,
             "interpretation_note": (
                 "Degree and betweenness centrality describe how connected a node is "
-                "within this capture. A high-centrality node is a candidate for "
-                "further investigation, not a C2 server, and centrality alone says "
-                "nothing about intent."
+                "within this capture. A node whose betweenness or degree centrality "
+                "clears a fixed threshold is marked a `hub_candidate` — a candidate "
+                "for further investigation, not a C2 server, and centrality alone "
+                "says nothing about intent."
             ),
         }
 
@@ -204,7 +214,35 @@ def build_graph(
             )
         else:
             _betweenness(graph)
+    _mark_hub_candidates(graph)
     return graph
+
+
+def _mark_hub_candidates(graph: Graph) -> None:
+    """Mark high-centrality nodes as candidates, with a quoted reason.
+
+    The label is deliberately a *candidate for review*: a central node that is
+    actually a botnet controller and a central node that is merely a load
+    balancer or a device bus master are indistinguishable from centrality alone.
+    """
+    for node in graph.nodes.values():
+        reasons: list[str] = []
+        if (node.betweenness or 0.0) >= HUB_BETWEENNESS_MIN:
+            reasons.append(
+                f"betweenness {node.betweenness:.3f} ≥ {HUB_BETWEENNESS_MIN}"
+            )
+        if node.degree_centrality >= HUB_DEGREE_CENTRALITY_MIN:
+            reasons.append(
+                f"degree centrality {node.degree_centrality:.3f} "
+                f"≥ {HUB_DEGREE_CENTRALITY_MIN}"
+            )
+        if reasons:
+            node.hub_candidate = True
+            node.hub_reason = (
+                f"Candidate for further review because {', '.join(reasons)}; "
+                "a central position is an observation about the topology of this "
+                "capture, never proof of intent or of command-and-control activity."
+            )
 
 
 def _split(endpoint: str) -> tuple[str, int]:

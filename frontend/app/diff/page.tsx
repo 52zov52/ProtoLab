@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { GitCompare } from "lucide-react";
 
@@ -14,6 +14,7 @@ import {
 import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
+import { heatCells, maxAbs, similarityColor } from "@/lib/diff-heatmap";
 
 export default function DiffPage() {
   const workspace = useWorkspace();
@@ -22,7 +23,9 @@ export default function DiffPage() {
   const [base, setBase] = useState("");
   const [compare, setCompare] = useState("");
   const [focus, setFocus] = useState("all");
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const action = useAction();
+  const router = useRouter();
 
   const captures = useAsync(
     () => (projectId ? api.projectCaptures(projectId) : Promise.resolve([])),
@@ -60,6 +63,11 @@ export default function DiffPage() {
     byte_delta?: number;
     packet_delta?: number;
   }[];
+
+  // Shared magnitude scales, so a cell's shade is comparable across the table.
+  const maxByte = maxAbs(sessions.map((row) => row.byte_delta ?? 0));
+  const maxPacket = maxAbs(sessions.map((row) => row.packet_delta ?? 0));
+  const selected = selectedRow != null ? sessions[selectedRow] : undefined;
 
   return (
     <div className="flex h-full flex-col">
@@ -153,6 +161,21 @@ export default function DiffPage() {
         ) : result.data ? (
           <>
             <Panel title="Session heat map">
+              <div className="flex flex-wrap items-center gap-3 border-b border-line px-3 py-2 text-2xs text-text-faint">
+                <span className="uppercase tracking-wider">similarity</span>
+                {[0, 0.25, 0.5, 0.75, 1].map((value) => (
+                  <span key={value} className="flex items-center gap-1">
+                    <span
+                      className="inline-block h-3 w-5 rounded-sm"
+                      style={{ background: similarityColor(value) }}
+                    />
+                    {value.toFixed(2)}
+                  </span>
+                ))}
+                <span className="ml-auto">
+                  Δ shade = magnitude · blue growth · amber shrink · empty = no change
+                </span>
+              </div>
               <table className="data-table">
                 <thead>
                   <tr>
@@ -165,36 +188,109 @@ export default function DiffPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sessions.map((row, index) => (
-                    <tr key={index}>
-                      <td>
-                        <Badge
-                          tone={
-                            row.status === "changed"
-                              ? "warn"
-                              : row.status === "added"
-                                ? "info"
-                                : row.status === "removed"
-                                  ? "bad"
-                                  : "ok"
-                          }
+                  {sessions.map((row, index) => {
+                    const cells = heatCells(row, maxByte, maxPacket);
+                    return (
+                      <tr
+                        key={index}
+                        className={
+                          selectedRow === index
+                            ? "cursor-pointer bg-accent-faint"
+                            : "cursor-pointer"
+                        }
+                        onClick={() =>
+                          setSelectedRow(selectedRow === index ? null : index)
+                        }
+                      >
+                        <td>
+                          <Badge
+                            tone={
+                              row.status === "changed"
+                                ? "warn"
+                                : row.status === "added"
+                                  ? "info"
+                                  : row.status === "removed"
+                                    ? "bad"
+                                    : "ok"
+                            }
+                          >
+                            {row.status}
+                          </Badge>
+                        </td>
+                        <td className="text-text-muted">{row.endpoints}</td>
+                        <td
+                          className="text-center font-mono text-[#0b0d10]"
+                          style={{ background: cells[0].color }}
+                          title={cells[0].title}
                         >
-                          {row.status}
-                        </Badge>
-                      </td>
-                      <td className="text-text-muted">{row.endpoints}</td>
-                      <td>{row.similarity.toFixed(3)}</td>
-                      <td className={row.byte_delta ? "text-status-warn" : undefined}>
-                        {row.byte_delta ?? 0}
-                      </td>
-                      <td>{row.packet_delta ?? 0}</td>
-                      <td className="whitespace-normal text-text-muted">
-                        {row.reasons.join("; ") || "—"}
-                      </td>
-                    </tr>
-                  ))}
+                          {row.similarity.toFixed(3)}
+                        </td>
+                        <td
+                          className="text-center font-mono"
+                          style={{ background: cells[1].color }}
+                          title={cells[1].title}
+                        >
+                          {row.byte_delta ?? 0}
+                        </td>
+                        <td
+                          className="text-center font-mono"
+                          style={{ background: cells[2].color }}
+                          title={cells[2].title}
+                        >
+                          {row.packet_delta ?? 0}
+                        </td>
+                        <td className="whitespace-normal text-text-muted">
+                          {row.reasons.join("; ") || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              {selected ? (
+                <div className="space-y-2 border-t border-line px-3 py-2">
+                  <p className="text-2xs text-text-muted">
+                    {selected.endpoints}
+                    {selected.reasons.length > 0
+                      ? ` — ${selected.reasons.join("; ")}`
+                      : ""}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selected.base_session_id ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => {
+                          workspace.selectSession(selected.base_session_id);
+                          router.push("/sessions");
+                        }}
+                      >
+                        Open baseline session
+                      </button>
+                    ) : (
+                      <span className="text-2xs text-text-faint">
+                        no baseline session
+                      </span>
+                    )}
+                    {selected.compare_session_id ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => {
+                          workspace.selectSession(selected.compare_session_id);
+                          router.push("/sessions");
+                        }}
+                      >
+                        Open comparison session
+                      </button>
+                    ) : (
+                      <span className="text-2xs text-text-faint">
+                        no comparison session
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : null}
               <div className="p-3">
                 <Caveat tone="warn">
                   {String(result.data.interpretation_note)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Badge,
@@ -14,6 +14,7 @@ import {
 import { useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
+import { edgeColor, protocolMeta } from "@/lib/graph-colors";
 import { cn, formatNumber } from "@/lib/format";
 
 type Node = {
@@ -27,6 +28,8 @@ type Node = {
   degree_centrality: number;
   betweenness: number | null;
   protocols: string[];
+  hub_candidate: boolean;
+  hub_reason: string | null;
 };
 
 type Edge = {
@@ -44,6 +47,15 @@ export default function GraphPage() {
   const projectId = params.get("project") ?? workspace.projectId;
   const [selected, setSelected] = useState<string | null>(null);
   const [minBytes, setMinBytes] = useState(0);
+  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
+  const [drag, setDrag] = useState<{
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    scale: number;
+  } | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const captures = useAsync(
     () => (projectId ? api.projectCaptures(projectId) : Promise.resolve([])),
@@ -109,6 +121,36 @@ export default function GraphPage() {
     node: Node;
   }[];
 
+  // Zoom with the wheel. Registered non-passively so the page does not scroll
+  // while the pointer is over the graph.
+  useEffect(() => {
+    const element = svgRef.current;
+    if (!element) return;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      setView((current) => {
+        const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+        const k = Math.min(4, Math.max(0.4, current.k * factor));
+        return { ...current, k };
+      });
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+  }, [graph.data]);
+
+  const legendProtocols = useMemo(() => {
+    const names = new Set<string>();
+    for (const edge of edges) {
+      for (const protocol of edge.protocols) names.add(protocol);
+    }
+    return [...names].sort();
+  }, [edges]);
+
+  const hubNodes = useMemo(
+    () => nodes.filter((node) => node.hub_candidate),
+    [nodes],
+  );
+
   const selectedNode = nodes.find((n) => n.id === selected) ?? null;
   const connectedEdges = selected
     ? edges.filter((e) => e.source === selected || e.target === selected)
@@ -169,79 +211,181 @@ export default function GraphPage() {
               <ErrorState message={graph.error ?? ""} onRetry={graph.reload} />
             ) : graph.data ? (
               <div className="p-3">
+                <div className="flex items-center justify-between gap-2 pb-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {legendProtocols.map((protocol) => {
+                      const meta = protocolMeta(protocol);
+                      return (
+                        <span
+                          key={protocol}
+                          className="flex items-center gap-1 text-2xs text-text-faint"
+                        >
+                          <span
+                            className="inline-block h-1.5 w-4 rounded-full"
+                            style={{ background: meta.color }}
+                          />
+                          {meta.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="btn"
+                      title="Zoom out"
+                      onClick={() =>
+                        setView((v) => ({ ...v, k: Math.max(0.4, v.k / 1.2) }))
+                      }
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      title="Zoom in"
+                      onClick={() =>
+                        setView((v) => ({ ...v, k: Math.min(4, v.k * 1.2) }))
+                      }
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setView({ x: 0, y: 0, k: 1 })}
+                    >
+                      reset
+                    </button>
+                  </div>
+                </div>
                 <svg
+                  ref={svgRef}
                   viewBox={`0 0 ${layout.size} ${layout.size}`}
-                  className="mx-auto h-auto w-full max-w-[560px]"
+                  className={cn(
+                    "mx-auto h-auto w-full max-w-[560px] touch-none select-none",
+                    drag ? "cursor-grabbing" : "cursor-grab",
+                  )}
                   role="img"
                   aria-label={`Network graph with ${nodes.length} nodes and ${edges.length} edges`}
+                  onMouseDown={(event) => {
+                    const rect = svgRef.current?.getBoundingClientRect();
+                    if (!rect) return;
+                    setDrag({
+                      startX: event.clientX,
+                      startY: event.clientY,
+                      originX: view.x,
+                      originY: view.y,
+                      scale: layout.size / rect.width,
+                    });
+                  }}
+                  onMouseMove={(event) => {
+                    if (!drag) return;
+                    setView((v) => ({
+                      ...v,
+                      x: drag.originX + (event.clientX - drag.startX) * drag.scale,
+                      y: drag.originY + (event.clientY - drag.startY) * drag.scale,
+                    }));
+                  }}
+                  onMouseUp={() => setDrag(null)}
+                  onMouseLeave={() => setDrag(null)}
+                  onDoubleClick={() => setView({ x: 0, y: 0, k: 1 })}
                 >
-                  <g>
-                    {edges.map((edge, index) => {
-                      const a = layout.positions.get(edge.source);
-                      const b = layout.positions.get(edge.target);
-                      if (!a || !b) return null;
-                      const active =
-                        selected === edge.source || selected === edge.target;
-                      return (
-                        <line
-                          key={index}
-                          x1={a.x}
-                          y1={a.y}
-                          x2={b.x}
-                          y2={b.y}
-                          stroke={active ? "#3fb6c8" : "#313842"}
-                          strokeWidth={1 + (edge.bytes_total / maxBytes) * 6}
-                          strokeOpacity={active ? 0.9 : 0.5}
-                        />
-                      );
-                    })}
-                  </g>
-                  <g>
-                    {nodes.map((node) => {
-                      const point = layout.positions.get(node.id);
-                      if (!point) return null;
-                      const r = 5 + (node.bytes_total / maxBytes) * 14;
-                      const active = node.id === selected;
-                      return (
-                        <g
-                          key={node.id}
-                          onClick={() => setSelected(active ? null : node.id)}
-                          className="cursor-pointer"
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              setSelected(active ? null : node.id);
-                            }
-                          }}
-                        >
-                          <circle
-                            cx={point.x}
-                            cy={point.y}
-                            r={r}
-                            fill={active ? "#3fb6c8" : "#171b21"}
-                            stroke={active ? "#3fb6c8" : "#8d97a3"}
-                            strokeWidth={1.5}
+                  <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+                    <g>
+                      {edges.map((edge, index) => {
+                        const a = layout.positions.get(edge.source);
+                        const b = layout.positions.get(edge.target);
+                        if (!a || !b) return null;
+                        const active =
+                          selected === edge.source || selected === edge.target;
+                        return (
+                          <line
+                            key={index}
+                            x1={a.x}
+                            y1={a.y}
+                            x2={b.x}
+                            y2={b.y}
+                            stroke={active ? "#3fb6c8" : edgeColor(edge)}
+                            strokeWidth={1 + (edge.bytes_total / maxBytes) * 6}
+                            strokeOpacity={active ? 0.95 : selected ? 0.25 : 0.6}
                           />
-                          <text
-                            x={point.x}
-                            y={point.y + r + 11}
-                            textAnchor="middle"
-                            className="fill-[#8d97a3] font-mono text-[9px]"
+                        );
+                      })}
+                    </g>
+                    <g>
+                      {nodes.map((node) => {
+                        const point = layout.positions.get(node.id);
+                        if (!point) return null;
+                        const r = 5 + (node.bytes_total / maxBytes) * 14;
+                        const active = node.id === selected;
+                        return (
+                          <g
+                            key={node.id}
+                            onClick={() => setSelected(active ? null : node.id)}
+                            className="cursor-pointer"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                setSelected(active ? null : node.id);
+                              }
+                            }}
                           >
-                            {node.label}
-                          </text>
-                        </g>
-                      );
-                    })}
+                            {node.hub_candidate ? (
+                              <circle
+                                cx={point.x}
+                                cy={point.y}
+                                r={r + 4}
+                                fill="none"
+                                stroke="#c9a227"
+                                strokeWidth={1.5}
+                                strokeDasharray="3 2"
+                              />
+                            ) : null}
+                            <circle
+                              cx={point.x}
+                              cy={point.y}
+                              r={r}
+                              fill={active ? "#3fb6c8" : "#171b21"}
+                              stroke={
+                                active
+                                  ? "#3fb6c8"
+                                  : node.hub_candidate
+                                    ? "#c9a227"
+                                    : "#8d97a3"
+                              }
+                              strokeWidth={1.5}
+                            />
+                            <text
+                              x={point.x}
+                              y={point.y + r + 11}
+                              textAnchor="middle"
+                              className="fill-[#8d97a3] font-mono text-[9px]"
+                            >
+                              {node.label}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
                   </g>
                 </svg>
+                <p className="mt-1 text-2xs text-text-faint">
+                  drag to pan · wheel or ± to zoom · double-click to reset
+                </p>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs text-text-faint">
                   <span>
                     nodes: {nodes.length} · edges: {edges.length} ·{" "}
                     {formatNumber(edges.reduce((sum, e) => sum + e.bytes_total, 0))} bytes
                     observed
                   </span>
+                  {hubNodes.length > 0 && (
+                    <span className="flex items-center gap-1 text-status-warn">
+                      <span className="inline-block h-2 w-2 rounded-full border border-dashed border-status-warn" />
+                      {hubNodes.length} hub candidate(s)
+                    </span>
+                  )}
                   {selected && (
                     <button type="button" className="btn" onClick={() => setSelected(null)}>
                       clear selection
@@ -283,6 +427,12 @@ export default function GraphPage() {
                     }
                   />
                 </dl>
+                {selectedNode.hub_candidate ? (
+                  <div className="space-y-1">
+                    <Badge tone="warn">hub candidate</Badge>
+                    <p className="text-2xs text-text-muted">{selectedNode.hub_reason}</p>
+                  </div>
+                ) : null}
                 <div>
                   <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
                     Observed connections
@@ -326,9 +476,14 @@ export default function GraphPage() {
                         <span className="font-mono text-2xs text-text">
                           {entry.rank}. {entry.node.label}
                         </span>
-                        <Badge tone="info">
-                          deg {entry.node.degree_centrality.toFixed(2)}
-                        </Badge>
+                        <span className="flex items-center gap-1">
+                          {entry.node.hub_candidate ? (
+                            <Badge tone="warn">hub</Badge>
+                          ) : null}
+                          <Badge tone="info">
+                            deg {entry.node.degree_centrality.toFixed(2)}
+                          </Badge>
+                        </span>
                       </div>
                       <p className="mt-0.5 text-2xs text-text-faint">
                         betweenness{" "}

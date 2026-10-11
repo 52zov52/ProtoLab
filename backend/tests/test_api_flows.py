@@ -567,6 +567,12 @@ def test_network_graph_is_built_from_observed_traffic(client, imported):
     assert degrees == {1}
     assert body["centrality"]
     assert "not a C2 server" in body["interpretation_note"]
+    # With one edge each node has degree centrality 1.0, so both clear the hub
+    # threshold; the flag must carry a quoted reason and never claim intent.
+    assert all(n["hub_candidate"] for n in body["nodes"])
+    for node in body["nodes"]:
+        assert "Candidate for further review" in node["hub_reason"]
+        assert "never proof of intent" in node["hub_reason"]
 
 
 def test_protocol_detection_falls_back_to_unknown(client, imported, project, bench_dir):

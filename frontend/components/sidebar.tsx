@@ -18,6 +18,7 @@ import {
   Settings,
   ShieldCheck,
   Sigma,
+  Table2,
 } from "lucide-react";
 
 import { useWorkspace } from "@/hooks/use-workspace";
@@ -33,6 +34,7 @@ export interface NavEntry {
 export const NAV: NavEntry[] = [
   { href: "/", label: "Overview", icon: LayoutDashboard, description: "Project metrics and health" },
   { href: "/captures", label: "Captures", icon: FileSearch, description: "Imported packet captures" },
+  { href: "/packets", label: "Packets", icon: Table2, description: "Virtualised packet table" },
   { href: "/sessions", label: "TCP Sessions", icon: Network, description: "Conversations and reassembly" },
   { href: "/streams", label: "Stream Explorer", icon: ScanLine, description: "Bytes, hex and provenance" },
   { href: "/tls", label: "TLS Analysis", icon: Fingerprint, description: "JA3/JA3S fingerprints and client families" },
