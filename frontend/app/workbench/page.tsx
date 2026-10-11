@@ -16,6 +16,7 @@ import {
 import { useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
+import { columnClassLegend, columnClassMeta } from "@/lib/column-classes";
 import { cn } from "@/lib/format";
 
 type MessageRow = {
@@ -112,8 +113,11 @@ export default function WorkbenchPage() {
     unique_values: number;
     entropy: number;
     change_rate: number;
+    monotonic_ratio: number;
     zero_count: number;
     most_common: [number, number][];
+    classification: string;
+    classification_rationale: string;
   }[];
 
   return (
@@ -283,10 +287,37 @@ export default function WorkbenchPage() {
             <EmptyState title="No statistics" />
           ) : (
             <div className="overflow-x-auto">
+              <div className="flex flex-col gap-2 border-b border-line p-3">
+                <div className="flex flex-wrap items-center gap-3 text-2xs text-text-faint">
+                  {columnClassLegend().map((meta) => (
+                    <span key={meta.label} className="flex items-center gap-1" title={meta.description}>
+                      <span
+                        className="inline-block h-3 w-3 rounded-sm"
+                        style={{ background: meta.color }}
+                      />
+                      {meta.label}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-end gap-px" aria-label="Byte class per offset">
+                  {columnStats.slice(0, 64).map((column) => {
+                    const meta = columnClassMeta(column.classification);
+                    return (
+                      <span
+                        key={column.offset}
+                        className="w-3 rounded-sm"
+                        style={{ background: meta.color, height: 18 }}
+                        title={`offset ${column.offset}: ${meta.label}`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Offset</th>
+                    <th>Class</th>
                     <th>Present</th>
                     <th>Absent</th>
                     <th>Unique</th>
@@ -296,24 +327,39 @@ export default function WorkbenchPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {columnStats.slice(0, 64).map((column) => (
-                    <tr key={column.offset}>
-                      <td className="text-text-faint">{column.offset}</td>
-                      <td>{column.present_count}</td>
-                      <td className={cn(column.absent_count > 0 && "text-status-warn")}>
-                        {column.absent_count}
-                      </td>
-                      <td>{column.unique_values}</td>
-                      <td>{column.entropy.toFixed(2)}</td>
-                      <td>{column.change_rate.toFixed(2)}</td>
-                      <td className="text-text-muted">
-                        {column.most_common
-                          .slice(0, 3)
-                          .map(([value, count]) => `0x${value.toString(16)}=${count}`)
-                          .join(" ")}
-                      </td>
-                    </tr>
-                  ))}
+                  {columnStats.slice(0, 64).map((column) => {
+                    const meta = columnClassMeta(column.classification);
+                    return (
+                      <tr key={column.offset}>
+                        <td className="text-text-faint">{column.offset}</td>
+                        <td>
+                          <span
+                            className="flex items-center gap-1.5"
+                            title={column.classification_rationale}
+                          >
+                            <span
+                              className="inline-block h-3 w-3 rounded-sm"
+                              style={{ background: meta.color }}
+                            />
+                            <Badge tone={meta.tone}>{meta.label}</Badge>
+                          </span>
+                        </td>
+                        <td>{column.present_count}</td>
+                        <td className={cn(column.absent_count > 0 && "text-status-warn")}>
+                          {column.absent_count}
+                        </td>
+                        <td>{column.unique_values}</td>
+                        <td>{column.entropy.toFixed(2)}</td>
+                        <td>{column.change_rate.toFixed(2)}</td>
+                        <td className="text-text-muted">
+                          {column.most_common
+                            .slice(0, 3)
+                            .map(([value, count]) => `0x${value.toString(16)}=${count}`)
+                            .join(" ")}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               <div className="p-3">

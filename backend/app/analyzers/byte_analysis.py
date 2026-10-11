@@ -26,9 +26,11 @@ def shannon_entropy(data: bytes) -> float:
         return 0.0
     counts = Counter(data)
     total = len(data)
-    return -sum(
+    entropy = -sum(
         (count / total) * math.log2(count / total) for count in counts.values()
     )
+    # ``-0.0`` would render as "-0.0" and look like a bug; normalise it.
+    return entropy + 0.0
 
 
 def byte_histogram(data: bytes) -> dict[int, int]:
@@ -121,12 +123,83 @@ class ColumnStats:
     max_value: int | None = None
     entropy: float = 0.0
     change_rate: float = 0.0
+    monotonic_ratio: float = 0.0
     zero_count: int = 0
     most_common: list[tuple[int, int]] = field(default_factory=list)
     values_sample: list[int] = field(default_factory=list)
+    classification: str = "unknown"
+    classification_rationale: str = ""
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
+
+
+#: The byte-column classes.  They describe the *shape* of a column, never the
+#: meaning of a field: "counter" says the byte rises across messages, not that
+#: it is a request id.
+COLUMN_CLASSES = (
+    "absent",
+    "constant",
+    "counter",
+    "enum",
+    "high_entropy",
+    "variable",
+)
+
+#: A byte that is essentially uniform over 256 values carries ~8 bits; 6.5 is a
+#: deliberately high bar so ordinary numeric fields are not called random.
+_HIGH_ENTROPY_BITS = 6.5
+_MONOTONIC_MIN = 0.8
+_ENUM_MAX_UNIQUE = 16
+
+
+def classify_column(
+    *,
+    present_count: int,
+    unique_values: int,
+    entropy: float,
+    change_rate: float,
+    monotonic_ratio: float,
+) -> tuple[str, str]:
+    """Classify one byte column from its statistics, with a stated reason.
+
+    The classes are ordered so the strongest reading wins.  ``high_entropy``
+    folds together random, compressed, encrypted and checksum bytes on purpose:
+    statistics alone cannot separate those, so the rationale says so instead of
+    guessing "checksum".
+    """
+    if present_count == 0:
+        return "absent", "This offset is not present in any message of the corpus."
+    if unique_values <= 1:
+        return (
+            "constant",
+            f"The same value in all {present_count} messages that reach this offset.",
+        )
+    if monotonic_ratio >= _MONOTONIC_MIN and unique_values >= 3:
+        return (
+            "counter",
+            f"Non-decreasing in {monotonic_ratio:.0%} of consecutive messages "
+            "(equal values allowed); consistent with a counter or running id, a "
+            "hypothesis rather than proof.",
+        )
+    if unique_values <= _ENUM_MAX_UNIQUE:
+        return (
+            "enum",
+            f"Only {unique_values} distinct values across {present_count} messages, "
+            "which suggests a small enumeration such as a type or status code.",
+        )
+    if entropy >= _HIGH_ENTROPY_BITS and change_rate >= 0.8:
+        return (
+            "high_entropy",
+            f"Near-uniform over {unique_values} values (entropy {entropy:.2f} bits) "
+            "and almost always changing. Random, compressed, encrypted and checksum "
+            "bytes all look like this, so no single label among them is claimed.",
+        )
+    return (
+        "variable",
+        f"{unique_values} distinct values over {present_count} messages, but not "
+        "monotonic and not near-uniform; no stronger reading is supported.",
+    )
 
 
 def column_statistics(messages: Sequence[bytes], *, max_messages: int = 20_000) -> list[ColumnStats]:
@@ -150,6 +223,17 @@ def column_statistics(messages: Sequence[bytes], *, max_messages: int = 20_000) 
             if len(m) > offset
         ]
         changes = sum(1 for i in range(1, len(ordered)) if ordered[i] != ordered[i - 1])
+        increases = sum(1 for i in range(1, len(ordered)) if ordered[i] >= ordered[i - 1])
+        change_rate = (changes / (len(ordered) - 1)) if len(ordered) > 1 else 0.0
+        monotonic_ratio = (increases / (len(ordered) - 1)) if len(ordered) > 1 else 0.0
+        entropy = shannon_entropy(bytes(present))
+        classification, rationale = classify_column(
+            present_count=len(present),
+            unique_values=len(counts),
+            entropy=entropy,
+            change_rate=change_rate,
+            monotonic_ratio=monotonic_ratio,
+        )
         entry = ColumnStats(
             offset=offset,
             present_count=len(present),
@@ -157,11 +241,14 @@ def column_statistics(messages: Sequence[bytes], *, max_messages: int = 20_000) 
             unique_values=len(counts),
             min_value=min(present) if present else None,
             max_value=max(present) if present else None,
-            entropy=shannon_entropy(bytes(present)),
-            change_rate=(changes / (len(ordered) - 1)) if len(ordered) > 1 else 0.0,
+            entropy=entropy,
+            change_rate=change_rate,
+            monotonic_ratio=monotonic_ratio,
             zero_count=sum(1 for b in present if b == 0),
             most_common=[(value, count) for value, count in counts.most_common(6)],
             values_sample=present[:32],
+            classification=classification,
+            classification_rationale=rationale,
         )
         stats.append(entry)
     return stats
