@@ -27,12 +27,15 @@ export default function ReportsPage() {
   const params = useSearchParams();
   const projectId = params.get("project") ?? workspace.projectId;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [useLlm, setUseLlm] = useState(false);
   const action = useAction();
 
   const reports = useAsync(
     () => (projectId ? api.reports(projectId) : Promise.resolve([])),
     [projectId, workspace.revision],
   );
+
+  const aiInfo = useAsync(() => api.assistantCapabilities(), []);
 
   const current = useAsync(
     () => (selectedId ? api.getReport(selectedId) : Promise.resolve(null)),
@@ -57,22 +60,56 @@ export default function ReportsPage() {
             from. A report can be produced entirely offline, without any language model.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={action.pending}
-          onClick={async () => {
-            const created = await action.run(() =>
-              api.report(projectId, { title: "Investigation report" }),
-            );
-            if (created) {
-              setSelectedId(String(created.report_id));
-              workspace.invalidate();
-            }
-          }}
-        >
-          {action.pending ? "Generating…" : "Generate report"}
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-1.5 text-2xs text-text-muted">
+              <input
+                type="checkbox"
+                checked={useLlm}
+                onChange={(event) => setUseLlm(event.target.checked)}
+              />
+              narrate with local model
+            </label>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={action.pending}
+              onClick={async () => {
+                const created = await action.run(() =>
+                  api.report(projectId, {
+                    title: "Investigation report",
+                    use_llm: useLlm,
+                  }),
+                );
+                if (created) {
+                  setSelectedId(String(created.report_id));
+                  workspace.invalidate();
+                }
+              }}
+            >
+              {action.pending ? "Generating…" : "Generate report"}
+            </button>
+          </div>
+          {useLlm && aiInfo.data ? (
+            (() => {
+              const enabled = Boolean(
+                ((aiInfo.data as Record<string, unknown>).external_ai as
+                  | { enabled?: boolean }
+                  | undefined)?.enabled,
+              );
+              return enabled ? (
+                <p className="text-2xs text-text-faint">
+                  Server switch is on; the report will still be produced if the model
+                  cannot narrate in time.
+                </p>
+              ) : (
+                <p className="text-2xs text-status-warn">
+                  External AI is disabled on this server, so the checkbox has no effect.
+                </p>
+              );
+            })()
+          ) : null}
+        </div>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-[280px_1fr]">

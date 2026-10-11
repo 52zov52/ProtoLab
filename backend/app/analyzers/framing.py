@@ -143,6 +143,12 @@ class FramingConfig:
                 raise ValueError("length_prefix endianness must be 'big' or 'little'")
             if self._str("includes_header", default="true") not in ("true", "false"):
                 raise ValueError("length_prefix includes_header must be 'true' or 'false'")
+            # Bytes from the start of a message to its first payload byte.  The
+            # default (the end of the length field) covers the common case where
+            # the length sits immediately before the body; a protocol with a
+            # larger fixed header, such as magic + length + ids, names it here.
+            if self.config.get("header_size") is not None:
+                self._int("header_size", minimum=0)
             self._int("max_length", minimum=1)
         elif self.method == "delimiter":
             self._int("delimiter", minimum=0, )
@@ -226,6 +232,10 @@ def _frame_length_prefix(stream: ReassembledStream, cfg: FramingConfig) -> list[
     endian = cfg._str("endianness", default="big")
     includes_header = cfg._str("includes_header", default="true") == "true"
     max_length = cfg._int("max_length", default=1 << 20)
+    # Where the body begins inside a message.  Defaulting to the end of the
+    # length field preserves the classic "length = body, field sits right before
+    # it" convention; protocols with a wider fixed header set it explicitly.
+    header_size = cfg._int("header_size", default=length_offset + length_size, minimum=0)
 
     def parse(chunk: bytes) -> int:
         return int.from_bytes(chunk, "little" if endian == "little" else "big")
@@ -257,7 +267,7 @@ def _frame_length_prefix(stream: ReassembledStream, cfg: FramingConfig) -> list[
         if len(header_bytes) != length_size:
             break
         declared = parse(header_bytes)
-        total = declared if includes_header else declared + length_offset + length_size
+        total = declared if includes_header else declared + header_size
         if total <= 0 or total > max_length:
             messages.append(
                 FramedMessage(
@@ -334,17 +344,17 @@ def _frame_delimiter(stream: ReassembledStream, cfg: FramingConfig) -> list[Fram
 
 
 def _find_byte(stream: ReassembledStream, start: int, value: int, limit: int) -> int | None:
-    cursor = start
-    while cursor < min(stream.stream_length, start + limit):
-        run = stream.find_run(cursor)
-        if run is None:
-            break
-        try:
-            index = run.data.index(value, cursor - run.start)
-        except ValueError:
-            cursor = run.end
-            continue
-        return run.start + index
+    """First offset of ``value`` at or after ``start``, scanning present bytes.
+
+    Walking the stream's contiguous runs (rather than a flat buffer) keeps the
+    search honest across holes: bytes on the far side of a gap are never treated
+    as adjacent.
+    """
+    limit_end = min(stream.stream_length, start + limit)
+    for offset, chunk in stream.contiguous_bytes(start, limit_end):
+        index = chunk.find(value)
+        if index >= 0:
+            return offset + index
     return None
 
 
@@ -579,26 +589,31 @@ def suggest_framing(
     if not data or total == 0:
         return suggestions
 
-    # 1. Length prefix, both endiannesses, both conventions.
+    # 1. Length prefix, both endiannesses, both conventions, and a family of
+    #    header sizes (a length field may sit before a wider fixed header).
     for offset in (0, 2, 4):
         for size in (1, 2, 4):
             for endian in ("big", "little"):
-                for includes in (True, False):
+                payload_offsets = {0, offset + size, 4, 6, 8, 10, 12, 16}
+                for payload_offset in sorted(payload_offsets):
                     score, detail = _score_length_prefix(
-                        stream, data, offset, size, endian, includes
+                        stream, data, offset, size, endian, payload_offset
                     )
                     if score is None:
                         continue
+                    config = {
+                        "length_offset": offset,
+                        "length_size": size,
+                        "endianness": endian,
+                        "includes_header": "false" if payload_offset else "true",
+                        "max_length": 1 << 20,
+                    }
+                    if payload_offset:
+                        config["header_size"] = payload_offset
                     suggestions.append(
                         {
                             "method": "length_prefix",
-                            "config": {
-                                "length_offset": offset,
-                                "length_size": size,
-                                "endianness": endian,
-                                "includes_header": "true" if includes else "false",
-                                "max_length": 1 << 20,
-                            },
+                            "config": config,
                             "score": round(score, 4),
                             "evidence": detail,
                         }
@@ -645,9 +660,14 @@ def _score_length_prefix(
     offset: int,
     size: int,
     endian: str,
-    includes: bool,
+    payload_offset: int,
 ) -> tuple[float | None, dict[str, object]]:
     """How consistent is ``length`` as a framing field? Returns a 0..1 score.
+
+    A message spans ``value + payload_offset`` bytes: ``payload_offset`` is where
+    the body starts inside the message (0 when the field already counts the whole
+    message, ``offset + size`` when it sits immediately before the body, larger
+    when a fixed header precedes the body).
 
     The score rewards explaining the *whole* stream, consistency across messages,
     and a field that starts at offset 0.  A candidate that only explains a prefix
@@ -657,6 +677,8 @@ def _score_length_prefix(
     covered = 0
     cursor = 0
     lengths_seen: list[int] = []
+    values_seen: list[int] = []
+    starts: list[int] = []
     while cursor < len(data):
         field_at = cursor + offset
         if field_at + size > len(data):
@@ -664,14 +686,22 @@ def _score_length_prefix(
         value = int.from_bytes(
             data[field_at : field_at + size], "little" if endian == "little" else "big"
         )
-        total = value if includes else value + offset + size
+        total = value + payload_offset
         if total <= 0 or total > len(data):
             return None, {}
+        starts.append(cursor)
+        values_seen.append(value)
         cursor += total
         count += 1
         covered += total
         lengths_seen.append(total)
     if count < 2:
+        return None, {}
+    # A field that reads zero in every message is not carrying a length: the
+    # "message" is just a constant-size block, which fixed-length framing
+    # describes more honestly.  Refusing it stops a degenerate candidate from
+    # outranking a real length that counts the whole message.
+    if not any(values_seen):
         return None, {}
     explains_all = cursor == len(data)
     if not explains_all:
@@ -691,12 +721,30 @@ def _score_length_prefix(
     # explanation.  One further in leaves leading bytes unexplained, which is
     # strictly more surprising for the same match quality.
     score -= 0.05 * offset
-    return max(0.0, score), {
+    # A real protocol usually stamps every message with the same sync bytes.  A
+    # candidate whose boundaries all start with a shared prefix is far more
+    # convincing than one that merely happens to tile the stream.
+    common_prefix = _common_start_prefix(data, starts)
+    score += 0.05 * common_prefix
+    return max(0.0, min(1.0, score)), {
         "messages_parsed": count,
         "coverage_ratio": round(covered / len(data), 4),
         "distinct_lengths": uniq,
         "explains_entire_stream": explains_all,
+        "payload_offset": payload_offset,
+        "shared_start_bytes": common_prefix,
     }
+
+
+def _common_start_prefix(data: bytes, starts: list[int], *, max_bytes: int = 3) -> int:
+    """Length of the byte prefix shared by every message start (0 if none)."""
+    common = 0
+    for k in range(max_bytes):
+        values = {data[s + k] for s in starts if s + k < len(data)}
+        if len(values) != 1:
+            break
+        common += 1
+    return common
 
 
 def reframe_by_length_prefix(data: bytes) -> list[bytes]:

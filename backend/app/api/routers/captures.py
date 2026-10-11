@@ -28,6 +28,9 @@ router = APIRouter()
 log = get_logger("mplab.captures")
 
 STREAM_CHUNK = 1024 * 1024
+# A TLS handshake lives at the head of a stream; scanning further only wastes
+# memory on bulk ciphertext without finding another handshake.
+MAX_TLS_SCAN_BYTES = 256 * 1024
 
 
 @router.get("/captures/{capture_id}", response_model=CaptureOut)
@@ -390,6 +393,153 @@ def export_pcapng(
     capture = load_capture(session, capture_id)
     result = export_annotated_pcapng(capture, session, storage)
     return result
+
+
+@router.get("/captures/{capture_id}/tls")
+def capture_tls(capture_id: str, session: SessionDep, storage: StorageDep) -> dict:
+    """Aggregate JA3 / JA3S fingerprints across every stream of a capture.
+
+    Fingerprinting reads only the plaintext handshake at the head of a stream,
+    so it works on encrypted traffic without any key material.  Handshakes are
+    grouped by ``(kind, md5)``; a handshake truncated in the capture is counted
+    as unreliable and never hashed from partial bytes.
+    """
+    from ...analyzers.tls_fingerprinting import (
+        BASE_VERSION,
+        DB_METADATA,
+        summarise_handshakes,
+    )
+    from ...services.stream_store import StreamStore
+
+    capture = load_capture(session, capture_id)
+    stream_rows = (
+        session.execute(
+            select(Stream)
+            .join(TcpSession, Stream.session_id == TcpSession.id)
+            .where(TcpSession.capture_id == capture.id)
+        )
+        .scalars()
+        .all()
+    )
+    paths = storage.capture_paths(capture.project_id, capture.id, capture.format)
+    store = StreamStore(paths.stream_blob, paths.stream_index)
+
+    groups: dict[tuple[str, str], dict] = {}
+    unreliable = 0
+    scanned = 0
+    if store.available:
+        for row in stream_rows:
+            descriptor = store.get(row.id)
+            if descriptor is None:
+                continue
+            descriptor.capture_id = capture.id
+            rebuilt = store.build(descriptor)
+            scanned += 1
+            window = rebuilt.contiguous_bytes(
+                0, min(rebuilt.stream_length, MAX_TLS_SCAN_BYTES)
+            )
+            for offset, chunk in window:
+                for record in summarise_handshakes(chunk, base_offset=offset):
+                    md5 = record.get("md5")
+                    if not record.get("reliable") or not md5:
+                        unreliable += 1
+                        continue
+                    key = (str(record["kind"]), str(md5))
+                    group = groups.get(key)
+                    if group is None:
+                        match = record.get("match") or {}
+                        group = {
+                            "kind": record["kind"],
+                            "md5": md5,
+                            "raw": record["raw"],
+                            "family": match.get("family"),
+                            "category": match.get("category", "unknown"),
+                            "confidence": match.get("confidence", "unknown"),
+                            "source": match.get("source"),
+                            "interpretation": match.get("interpretation"),
+                            "versions": set(),
+                            "sni": set(),
+                            "alpn": set(),
+                            "occurrences": 0,
+                            "streams": set(),
+                            "example_offset": record.get("offset_in_stream"),
+                        }
+                        groups[key] = group
+                    group["occurrences"] += 1
+                    group["streams"].add(row.id)
+                    if record.get("version"):
+                        group["versions"].add(str(record["version"]))
+                    if record.get("sni"):
+                        group["sni"].add(str(record["sni"]))
+                    for proto in record.get("alpn") or []:
+                        group["alpn"].add(str(proto))
+
+    fingerprints = [
+        {
+            "kind": group["kind"],
+            "md5": group["md5"],
+            "raw": group["raw"],
+            "family": group["family"],
+            "category": group["category"],
+            "confidence": group["confidence"],
+            "source": group["source"],
+            "interpretation": group["interpretation"],
+            "versions": sorted(group["versions"]),
+            "sni": sorted(group["sni"]),
+            "alpn": sorted(group["alpn"]),
+            "occurrences": group["occurrences"],
+            "stream_ids": sorted(group["streams"]),
+            "example_offset": group["example_offset"],
+        }
+        for group in groups.values()
+    ]
+    fingerprints.sort(
+        key=lambda item: (-item["occurrences"], str(item["kind"]), str(item["md5"]))
+    )
+
+    categories: dict[str, int] = {}
+    for item in fingerprints:
+        categories[item["category"]] = categories.get(item["category"], 0) + 1
+    client_hellos = [item for item in fingerprints if item["kind"] == "JA3"]
+    non_browser = [
+        item for item in client_hellos if item["category"] not in ("browser", "unknown")
+    ]
+    if not client_hellos:
+        statement = "No ClientHello was fingerprinted in this capture."
+    elif non_browser:
+        statement = (
+            f"{len(non_browser)} of {len(client_hellos)} client fingerprints match a published "
+            "library or tool profile rather than a browser. A match identifies a known client "
+            "family; it is not proof of the implementation and never an indication of maliciousness."
+        )
+    else:
+        statement = (
+            f"All {len(client_hellos)} matched client fingerprints are browser profiles or unknown. "
+            "A match identifies a known client family and is never an indication of maliciousness."
+        )
+
+    return {
+        "capture_id": capture.id,
+        "streams_scanned": scanned,
+        "streams_total": len(stream_rows),
+        "fingerprints": fingerprints,
+        "count": len(fingerprints),
+        "unreliable_handshakes": unreliable,
+        "categories": categories,
+        "verdict": {
+            "client_fingerprints": len(client_hellos),
+            "non_browser_matches": len(non_browser),
+            "statement": statement,
+        },
+        "fingerprint_database": BASE_VERSION,
+        "database": DB_METADATA,
+        "interpretation_note": (
+            "A hash present in the local database means this hash is published for that client "
+            "family. It is not proof of the implementation language and never an indication of "
+            "maliciousness. A missing or unreliable fingerprint means the handshake was absent or "
+            "truncated in this capture, not that the traffic was not TLS."
+        ),
+    }
 
 
 _ = (AuditEvent, get_context, shutil, ValidationFailed)

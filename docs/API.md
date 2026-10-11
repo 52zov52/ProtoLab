@@ -40,6 +40,7 @@ OpenAPI schema at `/api/openapi.json`.
 | GET | `/projects` | List projects with live counters |
 | POST | `/projects` | Create a project |
 | GET | `/projects/{project_id}` | Fetch one project |
+| PATCH | `/projects/{project_id}` | Update name/description; merge settings (e.g. AI consent) |
 | DELETE | `/projects/{project_id}` | Delete a project and its artefacts |
 | GET | `/projects/{project_id}/metrics` | Live counts (packets, sessions, messages, counterexamples …) |
 | GET | `/projects/{project_id}/captures` | Captures in the project |
@@ -65,6 +66,7 @@ value is seeded, cached or estimated.
 | GET | `/captures/{capture_id}/sessions` | TCP sessions |
 | GET | `/captures/{capture_id}/messages` | Framed messages |
 | POST | `/captures/{capture_id}/export-pcapng` | Annotated PCAPNG with round-trip check |
+| GET | `/captures/{capture_id}/tls` | JA3/JA3S aggregated across the capture's streams |
 | GET | `/network/captures/{capture_id}/graph` | Graph scoped to one capture |
 | POST | `/captures/diff` | Compare two captures |
 

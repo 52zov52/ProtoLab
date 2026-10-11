@@ -6,6 +6,8 @@ import {
   Activity,
   Boxes,
   FileSearch,
+  FileText,
+  Fingerprint,
   FlaskConical,
   GitCompare,
   Globe2,
@@ -13,9 +15,9 @@ import {
   Network,
   ScanLine,
   Search,
+  Settings,
   ShieldCheck,
   Sigma,
-  FileText,
 } from "lucide-react";
 
 import { useWorkspace } from "@/hooks/use-workspace";
@@ -33,6 +35,7 @@ export const NAV: NavEntry[] = [
   { href: "/captures", label: "Captures", icon: FileSearch, description: "Imported packet captures" },
   { href: "/sessions", label: "TCP Sessions", icon: Network, description: "Conversations and reassembly" },
   { href: "/streams", label: "Stream Explorer", icon: ScanLine, description: "Bytes, hex and provenance" },
+  { href: "/tls", label: "TLS Analysis", icon: Fingerprint, description: "JA3/JA3S fingerprints and client families" },
   { href: "/workbench", label: "Protocol Workbench", icon: FlaskConical, description: "Framing, comparison, fields" },
   { href: "/hypotheses", label: "Hypotheses & Rules", icon: Sigma, description: "Specs, validation, counterexamples" },
   { href: "/diff", label: "Capture Diff", icon: GitCompare, description: "Compare two recordings" },
@@ -41,6 +44,7 @@ export const NAV: NavEntry[] = [
   { href: "/assistant", label: "Investigation Assistant", icon: Search, description: "Typed natural-language search" },
   { href: "/reports", label: "Reports", icon: FileText, description: "Evidence-linked investigation report" },
   { href: "/security", label: "Security Center", icon: ShieldCheck, description: "Real configuration checks" },
+  { href: "/settings", label: "Project Settings", icon: Settings, description: "Project options and AI consent" },
 ];
 
 export function Sidebar() {

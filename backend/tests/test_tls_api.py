@@ -91,3 +91,38 @@ def test_binary_stream_reports_no_tls_rather_than_guessing(client, imported):
     capture_id = imported["capture"]["id"]
     handshakes = _fingerprints(client, capture_id)
     assert handshakes == [], "no handshake bytes means no fingerprint, not a fake one"
+
+
+def test_capture_tls_aggregates_every_stream_of_the_capture(client, project, bench_dir):
+    capture_id = _upload(client, project["id"], bench_dir, "tls_handshake.pcap")
+    client.post(f"/api/captures/{capture_id}/analyze", json={})
+    body = client.get(f"/api/captures/{capture_id}/tls").json()
+
+    kinds = {item["kind"] for item in body["fingerprints"]}
+    assert {"JA3", "JA3S"} <= kinds, body
+    ja3 = next(item for item in body["fingerprints"] if item["kind"] == "JA3")
+    assert ja3["occurrences"] >= 1
+    assert ja3["stream_ids"], "a fingerprint must name the stream it came from"
+    assert ja3["category"] in {"browser", "library", "bot", "server", "unknown"}
+    assert body["verdict"]["client_fingerprints"] >= 1
+    assert body["verdict"]["statement"]
+
+
+def test_capture_tls_counts_unreliable_handshakes_without_inventing_a_hash(
+    client, project, bench_dir
+):
+    capture_id = _upload(client, project["id"], bench_dir, "tls_truncated.pcap")
+    client.post(f"/api/captures/{capture_id}/analyze", json={})
+    body = client.get(f"/api/captures/{capture_id}/tls").json()
+
+    assert body["unreliable_handshakes"] >= 1
+    # Every aggregated fingerprint still carries a real hash; unreliable ones
+    # are counted separately instead of being merged under a fake value.
+    assert all(item["md5"] for item in body["fingerprints"])
+
+
+def test_capture_tls_on_a_binary_capture_is_empty_not_a_guess(client, imported):
+    capture_id = imported["capture"]["id"]
+    body = client.get(f"/api/captures/{capture_id}/tls").json()
+    assert body["fingerprints"] == []
+    assert body["verdict"]["client_fingerprints"] == 0

@@ -103,6 +103,18 @@ def resolve_provider(settings) -> Provider:
     return OllamaProvider(url=settings.ollama_url, model=settings.ollama_model)
 
 
+def project_consent(project: Any) -> bool:
+    """Whether a project has recorded consent for external AI.
+
+    The environment variable is the operator's master switch; this per-project
+    flag is the analyst's consent. Both must be set before any project-scoped
+    text is sent to a model, so a single global switch can never silently
+    authorise every project.
+    """
+    settings = getattr(project, "settings", None) or {}
+    return bool(settings.get("allow_external_ai", False))
+
+
 SYSTEM_PROMPT = """\
 You are assisting a network protocol reverse-engineering analyst.
 

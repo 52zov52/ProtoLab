@@ -31,6 +31,14 @@ class ProjectCreate(APIModel):
     settings: dict[str, Any] = Field(default_factory=dict)
 
 
+class ProjectUpdate(APIModel):
+    """Partial update. Omitted fields are left untouched."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=MAX_NAME)
+    description: str | None = Field(default=None, max_length=MAX_TEXT)
+    settings: dict[str, Any] | None = None
+
+
 class ProjectOut(APIModel):
     id: str
     name: str

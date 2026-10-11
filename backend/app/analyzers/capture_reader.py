@@ -754,9 +754,19 @@ def _decode_ipv4(frame: bytes, off: int) -> DecodedPacket | None:
     dst = ".".join(str(b) for b in frame[off + 16 : off + 20])
     transport_offset = off + ihl
     anomalies: list[str] = []
-    if len(frame) < off + total_length and total_length >= ihl:
-        anomalies.append("frame captured shorter than the IPv4 total length field")
-    return _finish(frame, transport_offset, src, dst, protocol, 4, off + total_length, anomalies)
+    # A zero total length is the classic signature of TCP segmentation offload
+    # (the NIC fills the field after capture); anything smaller than the header
+    # is malformed.  In both cases we must not trust the field, so the caller
+    # falls back to the captured frame length.
+    if total_length == 0 or total_length < ihl:
+        ip_end: int | None = None
+        if total_length != 0:
+            anomalies.append("IPv4 total length field is smaller than the IPv4 header")
+    else:
+        ip_end = off + total_length
+        if len(frame) < ip_end:
+            anomalies.append("frame captured shorter than the IPv4 total length field")
+    return _finish(frame, transport_offset, src, dst, protocol, 4, ip_end, anomalies)
 
 
 def _decode_ipv6(frame: bytes, off: int) -> DecodedPacket | None:
@@ -790,7 +800,7 @@ def _finish(
     dst: str,
     protocol: int,
     version: int,
-    ip_end: int,
+    ip_end: int | None,
     anomalies: list[str],
 ) -> DecodedPacket | None:
     decoded = DecodedPacket(
@@ -799,7 +809,7 @@ def _finish(
         ip_protocol=protocol,
         ip_version=version,
         transport_offset=transport_offset,
-        ip_total_length=max(0, ip_end - transport_offset),
+        ip_total_length=max(0, (ip_end - transport_offset)) if ip_end is not None else 0,
     )
     if protocol != 6:  # not TCP
         return decoded
@@ -822,14 +832,20 @@ def _finish(
     options = _decode_tcp_options(frame, transport_offset + 20, transport_offset + data_offset)
     decoded.tcp_options = options
     payload_start = transport_offset + data_offset
-    declared_payload = max(0, ip_end - payload_start)
     available = max(0, len(frame) - payload_start)
-    length = min(declared_payload, available) if declared_payload else available
+    if ip_end is None:
+        # The network header carried no trustworthy length (e.g. segmentation
+        # offload wrote zero).  We cannot tell real payload from link-layer
+        # padding, so we use everything the frame holds and say so.
+        length = available
+    else:
+        declared_payload = max(0, ip_end - payload_start)
+        length = min(declared_payload, available)
+        if available < declared_payload:
+            decoded.truncated = True
+            decoded.anomalies.append("TCP payload captured shorter than the IP total length")
     decoded.payload_offset_in_frame = payload_start
     decoded.payload_length = length
-    if declared_payload and available < declared_payload:
-        decoded.truncated = True
-        decoded.anomalies.append("TCP payload captured shorter than the IP total length")
     if data_offset < 20:
         decoded.anomalies.append("TCP data offset below the 20-byte minimum")
     return decoded

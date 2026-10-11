@@ -18,7 +18,7 @@ from ...reporting.generator import (
     render_markdown,
     store_report,
 )
-from ...reporting.llm import LLMUnavailable, narrate
+from ...reporting.llm import LLMUnavailable, narrate, project_consent
 from ...schemas import ReportRequest
 from ..context import SessionDep, StorageDep, audit, get_settings_dep, load_project
 
@@ -80,6 +80,13 @@ def create_report(
             ai_warnings.append(
                 "External AI is disabled, so the report was produced entirely from "
                 "stored facts. This is the expected offline behaviour."
+            )
+        elif not project_consent(project):
+            ai_warnings.append(
+                "External AI is enabled on this server, but this project has not recorded "
+                "consent. Turn on 'Allow external AI for this project' in Project Settings "
+                "to permit an optional local narration pass. The report below was produced "
+                "entirely from stored facts."
             )
         else:
             try:

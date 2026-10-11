@@ -173,6 +173,19 @@ def test_known_fingerprint_lookup_returns_the_local_entry():
     assert "not proof" in match["interpretation"]
 
 
+def test_every_database_entry_carries_a_presentation_category():
+    """The category is a client class for the UI, never a safety judgement."""
+    from app.analyzers.tls_fingerprinting import FINGERPRINT_DB
+
+    allowed = {"browser", "library", "bot", "server", "unknown"}
+    for entry in FINGERPRINT_DB:
+        assert entry.category in allowed
+        match = lookup(entry.fingerprint, entry.kind)
+        assert match["category"] == entry.category
+    unknown = lookup("0" * 32, "JA3")
+    assert unknown["category"] == "unknown"
+
+
 def test_non_tls_input_is_ignored():
     data = build_client_hello()
     assert iter_handshakes(bytes([0x00, 0x11, 0x22, 0x33]) * 40) == []

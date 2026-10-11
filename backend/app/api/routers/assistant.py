@@ -52,7 +52,8 @@ def capabilities(settings: SettingsDep) -> dict[str, Any]:
             "note": (
                 "External AI is off by default. Even when enabled it may only "
                 "narrate already-validated results; it cannot execute queries, "
-                "write files, or alter the investigation."
+                "write files, or alter the investigation. Report generation "
+                "additionally requires per-project consent in Project Settings."
             ),
         },
         "limitations": [

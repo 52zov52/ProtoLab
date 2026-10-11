@@ -37,6 +37,30 @@ def test_health_and_project_lifecycle(client):
     assert client.get(f"/api/projects/{project_id}").status_code == 404
 
 
+def test_patch_project_updates_fields_and_merges_settings(client, project):
+    project_id = project["id"]
+    response = client.patch(
+        f"/api/projects/{project_id}",
+        json={"description": "investigation A", "settings": {"allow_external_ai": True}},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["name"] == project["name"], "an omitted field must not be cleared"
+    assert body["description"] == "investigation A"
+    assert body["settings"]["allow_external_ai"] is True
+
+    # A later update that only knows one key must not drop the others.
+    client.patch(f"/api/projects/{project_id}", json={"settings": {"note": "merged"}})
+    merged = client.get(f"/api/projects/{project_id}").json()["settings"]
+    assert merged["allow_external_ai"] is True
+    assert merged["note"] == "merged"
+
+
+def test_patch_project_rejects_unknown_fields(client, project):
+    response = client.patch(f"/api/projects/{project['id']}", json={"unknown": 1})
+    assert response.status_code == 422
+
+
 def test_import_capture_hashes_and_indexes_it(client, project, bench_dir):
     response = upload(client, project["id"], bench_dir / "basic.pcap")
     assert response.status_code == 201, response.text

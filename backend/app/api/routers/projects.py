@@ -27,6 +27,7 @@ from ...schemas import (
     ProjectMetrics,
     ProjectOut,
     ProjectSummaryOut,
+    ProjectUpdate,
     ValidationRunOut,
 )
 from ..context import SessionDep, StorageDep, load_project
@@ -60,6 +61,26 @@ def create_project(payload: ProjectCreate, session: SessionDep, storage: Storage
 @router.get("/projects/{project_id}", response_model=ProjectOut)
 def get_project(project_id: str, session: SessionDep) -> Project:
     return load_project(session, project_id)
+
+
+@router.patch("/projects/{project_id}", response_model=ProjectOut)
+def update_project(project_id: str, payload: ProjectUpdate, session: SessionDep) -> Project:
+    """Rename a project, change its description, or merge settings.
+
+    Settings are merged key-by-key rather than replaced, so a client that only
+    knows about one key (for example the external-AI consent flag) cannot
+    silently drop every other key.
+    """
+    project = load_project(session, project_id)
+    if payload.name is not None:
+        project.name = payload.name
+    if payload.description is not None:
+        project.description = payload.description
+    if payload.settings is not None:
+        project.settings = {**(project.settings or {}), **payload.settings}
+    session.commit()
+    session.refresh(project)
+    return project
 
 
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

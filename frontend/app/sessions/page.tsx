@@ -1,8 +1,9 @@
 "use client";
 
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
+import { TcpStateDiagram } from "@/components/tcp-state-diagram";
 import {
   Badge,
   Caveat,
@@ -56,6 +57,27 @@ export default function SessionsPage() {
     () => (selected ? api.diagnostics(selected) : Promise.resolve(null)),
     [selected],
   );
+
+  // The reconstruction records which packets were retransmissions, out-of-order
+  // arrivals, duplicates or zero-window advertisements. We fold those per-stream
+  // lists into one packet-index set per kind so the diagram can mark them.
+  const anomalies = useMemo(() => {
+    const index = {
+      retransmissions: [] as number[],
+      out_of_order: [] as number[],
+      duplicates: [] as number[],
+      zero_windows: [] as number[],
+    };
+    const streams = ((diagnostics.data?.streams ?? []) as Record<string, unknown>[]) ?? [];
+    for (const stream of streams) {
+      for (const key of Object.keys(index) as Array<keyof typeof index>) {
+        for (const record of (stream[key] ?? []) as Record<string, unknown>[]) {
+          if (typeof record.packet_index === "number") index[key].push(record.packet_index);
+        }
+      }
+    }
+    return index;
+  }, [diagnostics.data]);
 
   if (!captureId) {
     return (
@@ -151,6 +173,19 @@ export default function SessionsPage() {
             </Panel>
           ) : (
             <>
+              <Panel
+                title="Observed state diagram"
+                actions={
+                  <span className="text-2xs text-text-faint">
+                    R retransmission · O out of order · Z zero window
+                  </span>
+                }
+              >
+                <div className="p-2">
+                  <TcpStateDiagram events={events} anomalies={anomalies} />
+                </div>
+              </Panel>
+
               <Panel
                 title="Connection state (observed)"
                 actions={

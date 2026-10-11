@@ -317,6 +317,11 @@ export const api = {
     }),
   getProject: (id: string) =>
     request(`/api/projects/${assertId(id, "project_id")}`, ProjectSchema),
+  updateProject: (id: string, body: Record<string, unknown>) =>
+    request(`/api/projects/${assertId(id, "project_id")}`, ProjectSchema, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   deleteProject: (id: string) =>
     request(`/api/projects/${assertId(id, "project_id")}`, z.never().or(z.null()), {
       method: "DELETE",
@@ -386,6 +391,45 @@ export const api = {
       `/api/captures/${assertId(id, "capture_id")}/export-pcapng`,
       z.record(z.string(), z.unknown()),
       { method: "POST" },
+    ),
+  /** JA3/JA3S aggregated across every stream of a capture. */
+  captureTls: (captureId: string) =>
+    request(
+      `/api/captures/${assertId(captureId, "capture_id")}/tls`,
+      z.object({
+        capture_id: z.string(),
+        streams_scanned: z.number(),
+        streams_total: z.number(),
+        count: z.number(),
+        unreliable_handshakes: z.number(),
+        categories: z.record(z.string(), z.number()),
+        verdict: z.object({
+          client_fingerprints: z.number(),
+          non_browser_matches: z.number(),
+          statement: z.string(),
+        }),
+        fingerprints: z.array(
+          z.object({
+            kind: z.string(),
+            md5: z.string(),
+            raw: z.string(),
+            family: z.string().nullable(),
+            category: z.string(),
+            confidence: z.string(),
+            source: z.string().nullable(),
+            interpretation: z.string().nullable(),
+            versions: z.array(z.string()),
+            sni: z.array(z.string()),
+            alpn: z.array(z.string()),
+            occurrences: z.number(),
+            stream_ids: z.array(z.string()),
+            example_offset: z.number().nullable(),
+          }),
+        ),
+        fingerprint_database: z.string(),
+        database: z.record(z.string(), z.unknown()),
+        interpretation_note: z.string(),
+      }),
     ),
 
   // -- sessions / streams ----------------------------------------------

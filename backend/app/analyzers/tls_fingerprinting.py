@@ -360,6 +360,10 @@ class FingerprintEntry:
     confidence: str
     updated: str | None = None
     note: str = ""
+    #: A coarse client class used only for presentation: ``browser``,
+    #: ``library``, ``bot``, ``server`` or ``unknown``.  It never carries a
+    #: safety judgement — "library" is not a synonym for "suspicious".
+    category: str = "unknown"
 
 
 #: A deliberately small, clearly-sourced local database.  It is *not* a
@@ -374,6 +378,7 @@ FINGERPRINT_DB: tuple[FingerprintEntry, ...] = (
         confidence="medium",
         updated="2026-10-01",
         note="Matches the library default profile; indicates a client library, not language proof.",
+        category="library",
     ),
     FingerprintEntry(
         fingerprint="e7d705a3286e19ea42f587b344ee6865",
@@ -382,6 +387,7 @@ FINGERPRINT_DB: tuple[FingerprintEntry, ...] = (
         source="Observed locally in a controlled lab build of curl 7.88",
         confidence="medium",
         updated="2026-10-01",
+        category="library",
     ),
     FingerprintEntry(
         fingerprint="cd08e31494f9531f560d64c6958b16d8",
@@ -390,6 +396,7 @@ FINGERPRINT_DB: tuple[FingerprintEntry, ...] = (
         source="Observed locally in a controlled lab build of Go 1.21 net/http",
         confidence="medium",
         updated="2026-10-01",
+        category="library",
     ),
     FingerprintEntry(
         fingerprint="6734f37431670b3ab4292b8f60f3f4e2",
@@ -398,6 +405,7 @@ FINGERPRINT_DB: tuple[FingerprintEntry, ...] = (
         source="Observed locally in a controlled lab build of OpenSSL 3.0",
         confidence="low",
         updated="2026-10-01",
+        category="server",
     ),
 )
 
@@ -420,6 +428,7 @@ def lookup(md5: str | None, kind: str) -> dict[str, object] | None:
                 "fingerprint": entry.fingerprint,
                 "kind": entry.kind,
                 "family": entry.family,
+                "category": entry.category,
                 "source": entry.source,
                 "confidence": entry.confidence,
                 "updated": entry.updated,
@@ -435,6 +444,7 @@ def lookup(md5: str | None, kind: str) -> dict[str, object] | None:
         "fingerprint": md5,
         "kind": kind,
         "family": None,
+        "category": "unknown",
         "source": None,
         "confidence": "unknown",
         "database_version": BASE_VERSION,

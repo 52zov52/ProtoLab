@@ -80,6 +80,11 @@ class LengthField(StrictModel):
     includes_header: bool = True
     multiplier: int = Field(default=1, ge=1, le=1_048_576)
     subtract: int = Field(default=0, ge=0, le=1_048_576)
+    #: Bytes from the start of a message to its first payload byte.  ``None``
+    #: means "the field ends where the body begins" (``offset + size``), which is
+    #: the common layout; a protocol whose fixed header is wider than the length
+    #: field states the real body start here.
+    header_size: int | None = Field(default=None, ge=0, le=4096)
 
 
 class FramingSpec(StrictModel):
@@ -367,7 +372,8 @@ class InterpretationEngine:
             )
             total = raw * lf.multiplier - lf.subtract
             if not lf.includes_header:
-                total += lf.offset + lf.size
+                header_size = lf.header_size if lf.header_size is not None else lf.offset + lf.size
+                total += header_size
             if total <= 0:
                 diagnostics.append(
                     {

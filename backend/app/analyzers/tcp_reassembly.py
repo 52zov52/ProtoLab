@@ -491,6 +491,11 @@ def reassemble(
         isn = None
 
     def to_stream(seq: int) -> int:
+        # 32-bit wraparound is expected and handled by the mask.  A value in the
+        # upper half of the space means the segment lies *before* the base
+        # (ISN+1), which a normal connection cannot produce: without this guard a
+        # single such segment would place its bytes ~4 GiB out and blow up the
+        # stream length and hole map.
         return (seq - base_abs) & 0xFFFFFFFF
 
     stream = ReassembledStream(
@@ -504,12 +509,27 @@ def reassemble(
 
     max_end = 0
     frontier = 0  # highest stream offset contiguous from the base
+    before_base: list[dict[str, object]] = []
     for seg in ordered:
         stream.segment_count += 1
         length = len(seg.payload)
         if length == 0:
             continue
         start = to_stream(seg.sequence)
+        if start > SEQ_HALF:
+            # The segment's bytes precede the stream base. That is contradictory
+            # for an ordinary connection (or means the inferred ISN is wrong), so
+            # the bytes are reported and excluded rather than turned into a hole
+            # spanning gigabytes.
+            before_base.append(
+                {
+                    "packet_index": seg.packet_index,
+                    "sequence": seg.sequence,
+                    "length": length,
+                }
+            )
+            stream.byte_count += length
+            continue
         end = start + length
         max_end = max(max_end, end)
         stream.byte_count += length
@@ -587,6 +607,9 @@ def reassemble(
 
     stream._reindex()
     stream.stream_length = max_end
+    if before_base:
+        diagnostics["segments_before_base"] = before_base
+        diagnostics["segments_before_base_count"] = len(before_base)
     _build_holes(stream, has_syn=has_syn, assume_open_end=assume_open_end)
     _detect_anomalies(stream, ordered, to_stream)
     stream.start_time = ordered[0].timestamp if ordered else 0.0
