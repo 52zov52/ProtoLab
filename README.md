@@ -105,10 +105,10 @@ because it cannot inspect the container's port mapping from inside.
 ## Verify the installation
 
 ```bash
-# Backend: 166 tests covering reassembly, framing, interpretation, security, examples
+# Backend: 172 tests covering reassembly, framing, interpretation, security, examples
 .venv/bin/python -m pytest backend -q
 
-# Frontend: 50 tests over hex rendering, tables, graph and formatting, plus lint and types
+# Frontend: 57 tests over hex rendering, tables, graph, pages and formatting, plus lint and types
 cd frontend && npm test && npm run typecheck && npm run lint
 
 # End-to-end demonstration against an in-process client (17 steps)
@@ -121,6 +121,10 @@ cd frontend && npm test && npm run typecheck && npm run lint
 
 `demo_scenario.py` is the judge-facing script: it walks the entire researcher
 path and prints what happened at each step, so the output *is* the evidence.
+
+Every push runs those same commands in CI (`.github/workflows/ci.yml`): the
+backend suite against a freshly generated test bench, the demo scenario, and the
+frontend tests, typecheck, lint and build.
 
 ---
 

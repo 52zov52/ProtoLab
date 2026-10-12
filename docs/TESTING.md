@@ -1,10 +1,10 @@
 # Testing
 
 ```bash
-# Backend - 166 tests (test_api_docs.py keeps docs/API.md honest)
+# Backend - 172 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
-# Frontend - 50 tests
+# Frontend - 57 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -34,6 +34,7 @@ python scripts/live_check.py
 | `test_tls_api.py` | Fingerprinting through the API on real captures |
 | `test_api_flows.py` | End-to-end vertical slice (includes upload size limits) |
 | `test_api_docs.py` | docs/API.md matches the exposed routes |
+| `test_regressions.py` | The four bugs fixed on the way to the baseline (padding, before-base, delimiter, wide header) |
 | `test_sample_protocol.py` | End-to-end on a real third-party capture (§8.8) |
 | `test_examples.py` | `examples/` archive imports, published spec reproduces the verdict (§31 п.9–14) |
 | `test_byte_analysis.py` | Byte-column classification and entropy |
@@ -50,6 +51,8 @@ python scripts/live_check.py
 | `frontend/tests/diff-heatmap.test.ts` | Diff heat-map colouring |
 | `frontend/tests/packet-table.test.ts` | Packet table virtualization helpers |
 | `frontend/tests/tcp-state-diagram.test.tsx` | TCP state-diagram layout (§8.1) |
+| `frontend/tests/captures-page.test.tsx` | Captures empty/error states and import failure (§23) |
+| `frontend/tests/hypotheses-page.test.tsx` | Rule editor validation and the rule → corpus → counterexamples loop (§23) |
 
 ## The test bench
 
@@ -133,6 +136,9 @@ would fail:
 - TLS fingerprinting reports a truncated handshake as unreliable with no hash
 - the archived example project re-imports with matching hashes, and the published
   specification reproduces `consistent_with_corpus` on a re-analysed capture
+- the four fixed bugs stay fixed: Ethernet padding is not payload, a segment
+  before the base does not blow up the stream, a delimiter after a hole is still
+  found, and a length prefix inside a wide fixed header frames correctly
 
 ## Frontend tests
 
@@ -144,12 +150,26 @@ get wrong:
 - hex highlighting covers exactly the requested half-open range
 - status tones never report an unknown value as good
 - byte formatting degrades to `-` rather than printing `NaN`
+- with no project selected the Captures tool says so instead of showing an empty
+  list, an empty project gets an explicit empty state, a failed request is shown
+  with a Retry, and a rejected import reports why
+- the rule editor does not claim a broken draft is valid JSON, invalid JSON never
+  reaches the server, a server rejection is reported, and the rule → corpus →
+  counterexamples loop renders the counterexample it produced
 
 ## The demo scenario as a test
 
 `scripts/demo_scenario.py` is both documentation and an end-to-end test: it
 walks all 17 steps and exits non-zero if any behaves unexpectedly. Run it after
 changing the analysis or interpretation code.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs exactly the commands above on every push: the
+backend suite (with the analytics extra and a freshly generated test bench), the
+in-process `demo_scenario.py`, and the frontend tests, typecheck, lint and build.
+The end-to-end scenario is part of the CI run, so a change that breaks the
+researcher path fails the build rather than only the demo.
 
 ## Adding tests
 

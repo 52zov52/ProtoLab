@@ -112,9 +112,11 @@ export default function HypothesesPage() {
     }
   }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const parseDraft = (): Record<string, unknown> | null => {
+  // Validate the draft against the current text so the "Valid JSON" hint stays
+  // honest while the analyst types — it must not claim a broken draft is fine.
+  const validateDraft = (text: string): Record<string, unknown> | null => {
     try {
-      const parsed = JSON.parse(draft);
+      const parsed = JSON.parse(text);
       if (typeof parsed !== "object" || parsed === null) {
         setSpecError("The specification must be a JSON object.");
         return null;
@@ -129,7 +131,7 @@ export default function HypothesesPage() {
 
   const create = async () => {
     if (!projectId) return;
-    const specification = parseDraft();
+    const specification = validateDraft(draft);
     if (!specification) return;
     const created = await action.run(
       () =>
@@ -147,7 +149,7 @@ export default function HypothesesPage() {
 
   const update = async () => {
     if (!projectId || !selectedId) return;
-    const specification = parseDraft();
+    const specification = validateDraft(draft);
     if (!specification) return;
     const updated = await action.run(
       () => api.updateInterpretation(projectId, selectedId, { specification }),
@@ -350,7 +352,10 @@ export default function HypothesesPage() {
               className="min-h-[420px] flex-1 resize-none border-0 bg-surface-sunken p-3 font-mono text-2xs text-text outline-none"
               value={draft}
               spellCheck={false}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                validateDraft(event.target.value);
+              }}
               aria-label="Interpretation specification"
             />
             <div className="border-t border-line p-2">
