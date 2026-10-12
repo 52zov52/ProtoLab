@@ -40,6 +40,7 @@ from ..analyzers.tcp_reassembly import ANALYZER_VERSION as REASSEMBLY_VERSION
 from ..analyzers.tcp_reassembly import ReassembledStream, reassemble
 from ..core.errors import LimitExceeded
 from ..core.logging import get_logger
+from ..db.base import new_id
 from ..models import Capture, Message, Packet, Stream, StreamRange, TcpSession
 from .storage import ProjectStorage
 
@@ -432,49 +433,64 @@ class CaptureAnalyzer:
                 "The framing rule produced more messages than the configured maximum.",
                 details={"limit": self.options.max_messages_per_stream, "produced": len(framed)},
             )
-        stream_row = self.db.query(Stream).filter(Stream.id == descriptor["stream_id"]).one()
+        stream_id = descriptor["stream_id"]
         packet_times = self._packet_time_index(descriptor)
+        # A large capture frames hundreds of thousands of messages, so rows are
+        # collected and inserted in bulk.  The ORM object-by-object path turned
+        # a 240k-message capture into a seven-minute analysis; the rows carry no
+        # behaviour that requires an ORM identity.
+        message_rows: list[dict] = []
+        range_rows: list[dict] = []
         for index, message in enumerate(framed):
             payload = stream.read(message.start_offset, message.length)
             diagnostics = dict(message.diagnostics)
             if not message.complete:
                 diagnostics["partial"] = True
-            self.db.add(
-                Message(
-                    stream_id=stream_row.id,
-                    session_id=session_id,
-                    capture_id=self.capture.id,
-                    index_in_stream=index,
-                    start_offset=message.start_offset,
-                    end_offset=message.end_offset,
-                    present_length=message.present_length,
-                    declared_length=message.declared_length,
-                    timestamp=_timestamp_for(stream, message.start_offset, packet_times),
-                    framing_method=message.method,
-                    framing_rule_version=cfg.rule_version,
-                    confidence=message.confidence,
-                    complete=message.complete,
-                    packet_references=message.packet_references,
-                    diagnostics=diagnostics,
-                    features=_message_features(payload),
-                    body_preview=payload[:512].hex(),
-                )
+            message_rows.append(
+                {
+                    "id": new_id(),
+                    "stream_id": stream_id,
+                    "session_id": session_id,
+                    "capture_id": self.capture.id,
+                    "index_in_stream": index,
+                    "start_offset": message.start_offset,
+                    "end_offset": message.end_offset,
+                    "present_length": message.present_length,
+                    "declared_length": message.declared_length,
+                    "timestamp": _timestamp_for(stream, message.start_offset, packet_times),
+                    "framing_method": message.method,
+                    "framing_rule_version": cfg.rule_version,
+                    "confidence": message.confidence,
+                    "complete": message.complete,
+                    "packet_references": message.packet_references,
+                    "diagnostics": diagnostics,
+                    "features": _message_features(payload),
+                    "body_preview": payload[:512].hex(),
+                }
             )
-            for run in stream.runs:
+            for run in stream.runs_intersecting(message.start_offset, message.end_offset):
                 lo = max(message.start_offset, run.start)
                 hi = min(message.end_offset, run.end)
                 if hi > lo:
-                    self.db.add(
-                        StreamRange(
-                            stream_id=stream_row.id,
-                            start_offset=lo,
-                            end_offset=hi,
-                            packet_references=stream.packet_references(lo, hi - lo),
-                            completeness="complete" if stream.is_present(message.start_offset, message.length) else "partial",
-                            conflict_status="conflict" if _overlaps_conflict(stream, lo, hi) else "none",
-                        )
+                    range_rows.append(
+                        {
+                            "id": new_id(),
+                            "stream_id": stream_id,
+                            "start_offset": lo,
+                            "end_offset": hi,
+                            "packet_references": stream.packet_references(lo, hi - lo),
+                            "completeness": "complete"
+                            if stream.is_present(message.start_offset, message.length)
+                            else "partial",
+                            "conflict_status": "conflict"
+                            if _overlaps_conflict(stream, lo, hi)
+                            else "none",
+                        }
                     )
-        self.db.flush()
+        if message_rows:
+            self.db.bulk_insert_mappings(Message, message_rows)
+        if range_rows:
+            self.db.bulk_insert_mappings(StreamRange, range_rows)
         return len(framed)
 
 

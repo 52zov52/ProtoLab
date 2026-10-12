@@ -1,10 +1,10 @@
 # Testing
 
 ```bash
-# Backend - 122 tests (test_api_docs.py keeps docs/API.md honest)
+# Backend - 160 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
-# Frontend - 19 tests
+# Frontend - 50 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -12,6 +12,9 @@ cd frontend && npm run typecheck && npm run lint
 
 # End-to-end, in-process (17 steps)
 python scripts/demo_scenario.py
+
+# Performance benchmark on a generated capture (Этап 3, §22)
+python scripts/benchmark_analysis.py --conversations 1000 --messages 120 --payload 256
 
 # End-to-end, against a running server
 python -m app &
@@ -26,13 +29,23 @@ python scripts/live_check.py
 | `test_interpretation.py` | Specification schema and evaluator |
 | `test_tls_fingerprinting.py` | JA3/JA3S algorithm |
 | `test_tls_api.py` | Fingerprinting through the API on real captures |
-| `test_api_flows.py` | End-to-end vertical slice |
+| `test_api_flows.py` | End-to-end vertical slice (includes upload size limits) |
 | `test_api_docs.py` | docs/API.md matches the exposed routes |
-| `test_tls_api.py` | Fingerprinting through the API on real captures |
+| `test_sample_protocol.py` | End-to-end on a real third-party capture (§8.8) |
+| `test_byte_analysis.py` | Byte-column classification and entropy |
+| `test_anomaly_detection.py` | Isolation Forest: seeding, refusal, API round-trip |
+| `test_llm_narration.py` | LLM degradation, redaction, context cap, consent |
+| `test_bind_config.py` | Bind/loopback security configuration |
 | `test_cors.py` | CORS headers present for allowed origins, absent otherwise |
 | `test_frontend_safety.py` | No `dangerouslySetInnerHTML`, no remote assets, headers set |
 | `frontend/tests/format.test.ts` | Formatting, hex conversion, status tones |
 | `frontend/tests/hex-viewer.test.tsx` | Hex rendering and message comparison |
+| `frontend/tests/evidence-links.test.ts` | Report evidence → navigation mapping |
+| `frontend/tests/column-classes.test.ts` | Byte-column class presentation |
+| `frontend/tests/graph-colors.test.ts` | Protocol-derived graph edge colours |
+| `frontend/tests/diff-heatmap.test.ts` | Diff heat-map colouring |
+| `frontend/tests/packet-table.test.ts` | Packet table virtualization helpers |
+| `frontend/tests/tcp-state-diagram.test.tsx` | TCP state-diagram layout (§8.1) |
 
 ## The test bench
 

@@ -116,6 +116,12 @@ Designed against captures up to ~100 MiB, ~250 000 packets, ~1000 sessions and
 ~100 000 messages on 4 vCPU / 8 GiB. Large tables are paginated and virtualized;
 the browser never loads a whole capture.
 
+This is now measured, not only designed: [PERFORMANCE.md](PERFORMANCE.md) records
+a run on a 77 MiB / 246 000-packet / 1000-session / 240 000-message capture
+(≈6 minutes, ≈1.4 GiB peak RSS on the benchmark machine, dominated by message
+handling). The synchronous `/analyze` path blocks; large captures can be run
+through the cancellable background job (`/api/captures/{id}/analyze-async`).
+
 Exceeding a limit produces an **explicit error naming the limit** — data is
 never silently truncated. Screens that hit a ceiling say what was not analysed.
 
@@ -202,8 +208,10 @@ Stated so the suite is not over-claimed:
 - Frontend tests cover formatting, hex rendering and comparison. The larger
   pages (workbench, graph, assistant) have no component tests; they are covered
   indirectly by the backend end-to-end tests.
-- No load or soak testing has been run against a 250 000-packet capture; the
-  limits are configured for that profile but not benchmarked here.
+- Analysis has been benchmarked once at profile scale
+  ([PERFORMANCE.md](PERFORMANCE.md)); there has been no *load* or *soak* test and
+  no repeated-run stress test, and the figures are from a Windows workstation,
+  not the target container.
 - Security tests cover the controls listed in [SECURITY.md](SECURITY.md). There
   is no fuzzing campaign against the PCAP/PCAPNG parsers.
 - `npm audit` and `pip-audit` were run once at build time. A clean result is a

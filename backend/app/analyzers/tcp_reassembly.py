@@ -195,6 +195,16 @@ class ReassembledStream:
         self.runs.sort(key=lambda r: r.start)
         self._index()
 
+    def runs_intersecting(self, start: int, end: int) -> list[Run]:
+        """Runs overlapping ``[start, end)`` via the interval index.
+
+        Callers that need to attribute a long stream of messages to runs should
+        use this rather than iterating every run per message: the naive loop is
+        O(messages x runs) and turns a large framed capture into minutes of
+        avoidable work.
+        """
+        return list(self._runs_intersecting(start, end))
+
     def _runs_intersecting(self, start: int, end: int) -> Iterable[Run]:
         if not self.runs:
             return []

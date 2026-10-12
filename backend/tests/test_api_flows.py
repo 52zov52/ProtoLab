@@ -455,6 +455,26 @@ def test_oversized_upload_is_rejected(client, project, tmp_path, settings):
     assert response.status_code == 413
 
 
+def test_upload_above_the_json_body_limit_is_accepted(client, project, settings):
+    """A capture is a multipart upload, not a JSON body.
+
+    The global body guard used to apply ``max_json_body_bytes`` (2 MiB) to
+    every request, so any capture above 2 MiB — far below the advertised
+    ``max_upload_bytes`` of 100 MiB — was rejected with 413 before reaching the
+    handler. This imports a real, larger upload and checks it is stored whole.
+    """
+    size = settings.limits.max_json_body_bytes + 1024 * 1024
+    assert size < settings.limits.max_upload_bytes
+    payload = b"\xd4\xc3\xb2\xa1" + b"\x00" * (size - 4)
+    response = client.post(
+        "/api/captures",
+        data={"project_id": project["id"], "name": "large.pcap"},
+        files={"file": ("large.pcap", payload, "application/octet-stream")},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["file_size"] == size
+
+
 def test_object_ownership_is_enforced(client, project):
     other = client.post("/api/projects", json={"name": "Other"}).json()
     hypothesis = client.post(

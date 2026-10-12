@@ -233,9 +233,20 @@ def _install_middleware(app: FastAPI, settings: Settings) -> None:
                 _apply_cors(response, origin)
                 return response
 
-            enforce_body_size(
-                request.headers.get("content-length"), settings.limits.max_json_body_bytes
+            # The body guard must not use one ceiling for everything: a JSON
+            # request is bounded tightly, but a capture/archive upload is a
+            # multipart body and is allowed up to the upload ceiling.  Using the
+            # JSON limit here silently rejected every capture above 2 MiB even
+            # though the upload limit is 100 MiB and the profile promises
+            # ~100 MiB captures.  The endpoint still re-checks the real limit
+            # while streaming, so this is a second, not the only, gate.
+            content_type = request.headers.get("content-type", "")
+            body_limit = (
+                settings.limits.max_upload_bytes
+                if content_type.startswith("multipart/form-data")
+                else settings.limits.max_json_body_bytes
             )
+            enforce_body_size(request.headers.get("content-length"), body_limit)
             limiter.check(_client_key(request))
 
             response = await call_next(request)
