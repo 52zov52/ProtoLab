@@ -12,7 +12,7 @@ import {
 } from "@/components/ui";
 import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
-import { api } from "@/lib/api";
+import { API_BASE, api } from "@/lib/api";
 import {
   evidenceTarget,
   shortId,
@@ -164,24 +164,17 @@ export default function ReportsPage() {
               <div className="flex gap-2">
                 <a
                   className="btn"
-                  href={`${api.constructor === Object ? "" : ""}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    window.open(
-                      `${location.origin}/api/reports/${selectedId}/markdown`,
-                      "_blank",
-                    );
-                  }}
+                  href={`${API_BASE}/api/reports/${selectedId}/markdown`}
+                  target="_blank"
+                  rel="noreferrer"
                 >
                   Markdown
                 </a>
                 <a
                   className="btn"
-                  href="#json"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    window.open(`${location.origin}/api/reports/${selectedId}/json`, "_blank");
-                  }}
+                  href={`${API_BASE}/api/reports/${selectedId}/json`}
+                  target="_blank"
+                  rel="noreferrer"
                 >
                   JSON
                 </a>

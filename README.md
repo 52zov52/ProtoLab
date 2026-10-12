@@ -164,6 +164,7 @@ them from the real `sample_protocol/` capture.
 
 | Document | Contents |
 |---|---|
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Walkthrough of every tab, button and field |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module layout and data flow |
 | [docs/PROTOCOL_RESEARCH.md](docs/PROTOCOL_RESEARCH.md) | The reverse-engineering method |
 | [docs/INTERPRETATION_FORMAT.md](docs/INTERPRETATION_FORMAT.md) | Specification schema |
