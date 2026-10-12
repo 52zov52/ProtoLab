@@ -39,6 +39,10 @@ services:
       # External AI is OFF by default. Nothing leaves the machine unless an
       # operator sets this to true and runs a local Ollama instance.
       MPLAB_ALLOW_EXTERNAL_AI: "false"
+      # Only used when the optional "ai" profile supplies a model. Override in
+      # .env to point at the compose Ollama service (http://madrigal-ollama:11434).
+      MPLAB_OLLAMA_URL: ${MPLAB_OLLAMA_URL:-http://127.0.0.1:11434}
+      MPLAB_OLLAMA_MODEL: ${MPLAB_OLLAMA_MODEL:-qwen2.5:7b-instruct}
     volumes:
       # Read-only source captures; the app writes its own artefacts elsewhere.
       - ./data/testbench:/captures:ro
@@ -91,10 +95,34 @@ services:
     networks:
       - lab
 
+  # Optional local narration model for the report/assistant features.
+  #
+  #   docker compose --profile ai up
+  #
+  # This service is never started without the profile, and even then nothing is
+  # sent to it until MPLAB_ALLOW_EXTERNAL_AI=true and the project records its own
+  # consent. Only aggregated, redacted summaries are ever sent.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: madrigal-ollama
+    profiles:
+      - ai
+    ports:
+      # Published on loopback only, so the host `ollama` CLI can pull a model.
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - lab
+
 volumes:
   # SQLite database, capture artefacts and exports. Deleting a project through
   # the UI removes only that project's subtree.
   mplab-data:
+  # Downloaded models for the optional "ai" profile. Safe to delete; the model
+  # is re-pulled on next use.
+  ollama-models:
 
 networks:
   lab:

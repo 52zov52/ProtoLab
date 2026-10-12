@@ -30,7 +30,10 @@ _SENSITIVE_KEY = re.compile(
 _JWT = re.compile(r"\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\b")
 _HEX_BLOB = re.compile(r"\b(?:[0-9a-fA-F]{2}){16,}\b")
 _KEYLOG_LINE = re.compile(
-    r"\b(?:CLIENT_)?(?:RSA|ECDHE|DHE|PSK|MASTER)_[A-Z0-9_]*_[A-Z0-9_]+\s+[0-9a-fA-F]{32,}"
+    r"\b(?:CLIENT_RANDOM|(?:CLIENT|SERVER)_(?:HANDSHAKE_)?TRAFFIC_SECRET_\d+|"
+    r"(?:CLIENT|SERVER)_EARLY_TRAFFIC_SECRET_\d+|EXPORTER_SECRET|"
+    r"(?:CLIENT_)?(?:RSA|ECDHE|DHE|PSK|MASTER)_[A-Z0-9_]*_[A-Z0-9_]+)"
+    r"\s+[0-9a-fA-F]{32,}"
 )
 
 MASK = "***redacted***"

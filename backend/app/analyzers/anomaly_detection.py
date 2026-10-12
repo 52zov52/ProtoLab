@@ -153,7 +153,7 @@ def train_isolation_forest(
     summary = {
         "sample_count": int(matrix.shape[0]),
         "feature_count": int(matrix.shape[1]),
-        "feature_names": dataset.feature_names,
+        "feature_names": dataset.names,
         "contamination": contamination,
         "n_estimators": n_estimators,
         "seed": seed,
@@ -172,7 +172,7 @@ def train_isolation_forest(
     }
     return TrainedModel(
         blob=pickle.dumps(model, protocol=pickle.HIGHEST_PROTOCOL),
-        feature_names=dataset.feature_names,
+        feature_names=dataset.names,
         params={
             "contamination": contamination,
             "n_estimators": n_estimators,
@@ -243,7 +243,7 @@ def _warnings(dataset: FeatureSet, matrix) -> list[str]:
         )
     constant = [
         name
-        for index, name in enumerate(dataset.feature_names)
+        for index, name in enumerate(dataset.names)
         if float(np.std(matrix[:, index])) == 0.0
     ]
     if constant:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import {
@@ -13,12 +13,17 @@ import {
 import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
+import {
+  evidenceTarget,
+  shortId,
+  type EvidenceItem,
+} from "@/lib/evidence-links";
 
 type Section = {
   number: number;
   title: string;
   body: string;
-  evidence: { kind: string; id: string }[];
+  evidence: EvidenceItem[];
   notes: string[];
 };
 
@@ -192,7 +197,10 @@ export default function ReportsPage() {
           ) : current.state === "loading" ? (
             <Skeleton rows={14} />
           ) : current.data ? (
-            <ReportView report={current.data as Record<string, unknown>} />
+            <ReportView
+              report={current.data as Record<string, unknown>}
+              projectId={projectId}
+            />
           ) : null}
         </Panel>
       </div>
@@ -200,9 +208,25 @@ export default function ReportsPage() {
   );
 }
 
-function ReportView({ report }: { report: Record<string, unknown> }) {
+function ReportView({
+  report,
+  projectId,
+}: {
+  report: Record<string, unknown>;
+  projectId: string;
+}) {
+  const workspace = useWorkspace();
+  const router = useRouter();
   const sections = (report.sections ?? []) as Section[];
   const warnings = (report.ai_warnings ?? []) as string[];
+
+  const openEvidence = (item: EvidenceItem) => {
+    const target = evidenceTarget(item, projectId);
+    if (!target.href) return;
+    if (target.select === "session") workspace.selectSession(item.id);
+    if (target.select === "capture") workspace.selectCapture(item.id);
+    router.push(target.href);
+  };
 
   return (
     <div className="space-y-4 p-4">
@@ -243,14 +267,32 @@ function ReportView({ report }: { report: Record<string, unknown> }) {
             ))}
           </div>
           {section.evidence.length > 0 && (
-            <p className="mt-1 font-mono text-2xs text-text-faint">
-              evidence:{" "}
-              {section.evidence
-                .slice(0, 8)
-                .map((item) => `${item.kind}:${item.id.slice(0, 10)}`)
-                .join("  ")}
-              {section.evidence.length > 8 ? `  (+${section.evidence.length - 8})` : ""}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-2xs text-text-faint">
+              <span>evidence:</span>
+              {section.evidence.slice(0, 8).map((item) => {
+                const target = evidenceTarget(item, projectId);
+                const text = `${target.label}:${shortId(item.id)}`;
+                const key = `${item.kind}:${item.id}`;
+                return target.href ? (
+                  <button
+                    key={key}
+                    type="button"
+                    className="cursor-pointer underline decoration-dotted underline-offset-2 hover:text-accent"
+                    title={`open ${target.label} ${item.id}`}
+                    onClick={() => openEvidence(item)}
+                  >
+                    {text}
+                  </button>
+                ) : (
+                  <span key={key} title={`${item.kind} ${item.id}`}>
+                    {text}
+                  </span>
+                );
+              })}
+              {section.evidence.length > 8 ? (
+                <span>+{section.evidence.length - 8}</span>
+              ) : null}
+            </div>
           )}
           {section.notes.map((note, index) => (
             <Caveat key={index}>{note}</Caveat>
