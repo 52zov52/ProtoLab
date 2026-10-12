@@ -212,9 +212,11 @@ def list_hypotheses(project_id: str, session: SessionDep) -> list[Hypothesis]:
 
 
 @router.get("/projects/{project_id}/interpretations", response_model=list[InterpretationOut])
-def list_interpretations(project_id: str, session: SessionDep) -> list[Interpretation]:
+def list_interpretations(project_id: str, session: SessionDep) -> list[dict]:
+    from ...services.interpretation_service import interpretation_payload
+
     load_project(session, project_id)
-    return list(
+    rows = list(
         session.execute(
             select(Interpretation)
             .where(Interpretation.project_id == project_id)
@@ -223,6 +225,7 @@ def list_interpretations(project_id: str, session: SessionDep) -> list[Interpret
         .scalars()
         .all()
     )
+    return [interpretation_payload(row) for row in rows]
 
 
 @router.get("/projects/{project_id}/validation-runs", response_model=list[ValidationRunOut])

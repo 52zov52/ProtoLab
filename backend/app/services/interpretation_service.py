@@ -65,6 +65,28 @@ OUTCOME_FAILED = "failed"
 OUTCOME_UNPARSED = "unparsed"
 
 
+def interpretation_payload(row: Interpretation) -> dict[str, Any]:
+    """Serialise an interpretation for the API.
+
+    The ORM attribute is ``schema_json`` (its historical name); the API field is
+    ``specification``.  This mapping lives in one place so the project-scoped
+    routes and the flat aliases cannot drift apart — the previous arrangement
+    left ``GET /projects/{id}/interpretations`` returning a 500 because it handed
+    raw ORM rows to ``InterpretationOut``, which expects ``specification``.
+    """
+    return {
+        "id": row.id,
+        "project_id": row.project_id,
+        "hypothesis_id": row.hypothesis_id,
+        "name": row.name,
+        "specification": row.schema_json,
+        "version": row.version,
+        "checksum": row.checksum,
+        "created_at": row.created_at,
+        "notes": row.notes,
+    }
+
+
 @dataclass
 class CorpusSelection:
     capture_ids: list[str]

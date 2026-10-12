@@ -1,7 +1,7 @@
 # Testing
 
 ```bash
-# Backend - 160 tests (test_api_docs.py keeps docs/API.md honest)
+# Backend - 166 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
 # Frontend - 50 tests
@@ -15,6 +15,9 @@ python scripts/demo_scenario.py
 
 # Performance benchmark on a generated capture (Этап 3, §22)
 python scripts/benchmark_analysis.py --conversations 1000 --messages 120 --payload 256
+
+# Regenerate the example artefacts in examples/ (§31 п.9–14)
+python scripts/build_examples.py
 
 # End-to-end, against a running server
 python -m app &
@@ -32,6 +35,7 @@ python scripts/live_check.py
 | `test_api_flows.py` | End-to-end vertical slice (includes upload size limits) |
 | `test_api_docs.py` | docs/API.md matches the exposed routes |
 | `test_sample_protocol.py` | End-to-end on a real third-party capture (§8.8) |
+| `test_examples.py` | `examples/` archive imports, published spec reproduces the verdict (§31 п.9–14) |
 | `test_byte_analysis.py` | Byte-column classification and entropy |
 | `test_anomaly_detection.py` | Isolation Forest: seeding, refusal, API round-trip |
 | `test_llm_narration.py` | LLM degradation, redaction, context cap, consent |
@@ -127,6 +131,8 @@ would fail:
 - protocol detection falls back to `unknown_binary` rather than guessing
 - a reused 4-tuple is not merged
 - TLS fingerprinting reports a truncated handshake as unreliable with no hash
+- the archived example project re-imports with matching hashes, and the published
+  specification reproduces `consistent_with_corpus` on a re-analysed capture
 
 ## Frontend tests
 

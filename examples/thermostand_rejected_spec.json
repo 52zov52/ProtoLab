@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "protocol_name": "Thermostand",
+  "description": "Two-byte magic 0xA65C, a big-endian payload length that counts only the payload, a request id, a flags byte and a command byte; the fixed header is 8 bytes. Wrong variant: the length is read as if it counted the header, which the corpus contradicts.",
+  "framing": {
+    "method": "length_prefix",
+    "length_field": {
+      "offset": 2,
+      "size": 2,
+      "endianness": "big",
+      "includes_header": true
+    }
+  },
+  "fields": [
+    {
+      "name": "magic",
+      "kind": "uint16",
+      "offset": 0,
+      "size": 2,
+      "endianness": "big",
+      "semantic_status": "observed",
+      "description": "Constant 0xA65C on every message; a strong boundary signal.",
+      "constraint": {
+        "kind": "constant",
+        "value": 42588,
+        "description": "The device always sends 0xA65C here."
+      }
+    },
+    {
+      "name": "payload_length",
+      "kind": "uint16",
+      "offset": 2,
+      "size": 2,
+      "endianness": "big",
+      "semantic_status": "observed",
+      "description": "Bytes of payload after the 8-byte header."
+    },
+    {
+      "name": "request_id",
+      "kind": "uint16",
+      "offset": 4,
+      "size": 2,
+      "endianness": "big",
+      "semantic_status": "hypothesis",
+      "description": "Increments across a session; echoed so pairs can be correlated."
+    },
+    {
+      "name": "flags",
+      "kind": "uint8",
+      "offset": 6,
+      "size": 1,
+      "semantic_status": "unknown",
+      "description": "Observed values 0x00/0x01; meaning not established from the bytes alone."
+    },
+    {
+      "name": "command",
+      "kind": "enum",
+      "offset": 7,
+      "size": 1,
+      "semantic_status": "hypothesis",
+      "description": "Operation selector. Names correlate the opcodes with action_journal.csv.",
+      "values": {
+        "16": "read_config",
+        "32": "set_config",
+        "48": "read_values"
+      }
+    }
+  ],
+  "message_types": [
+    {
+      "name": "read_config",
+      "when": {
+        "field": "command",
+        "operator": "equals",
+        "value": {
+          "raw": 16
+        }
+      }
+    },
+    {
+      "name": "set_config",
+      "when": {
+        "field": "command",
+        "operator": "equals",
+        "value": {
+          "raw": 32
+        }
+      }
+    },
+    {
+      "name": "read_values",
+      "when": {
+        "field": "command",
+        "operator": "equals",
+        "value": {
+          "raw": 48
+        }
+      }
+    }
+  ]
+}

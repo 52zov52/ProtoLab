@@ -35,14 +35,16 @@ def create_interpretation_global(
         )
     load_project(session, target)
     from .hypotheses import _service
+    from ...services.interpretation_service import interpretation_payload
 
-    return _service(session, storage).create_interpretation(
+    row = _service(session, storage).create_interpretation(
         target,
         name=payload.name or "Interpretation",
         schema_json=payload.specification,
         hypothesis_id=payload.hypothesis_id,
         notes=payload.notes,
     )
+    return interpretation_payload(row)
 
 
 @router.get("/validation-runs/{run_id}")

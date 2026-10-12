@@ -1,0 +1,17 @@
+{
+  "interpretation_id": "a05fad8bd5cc455d8877db16f790cb39",
+  "run_id": "5b97abb809104b88a4be563f6c6060f5",
+  "total": 16,
+  "matched": 16,
+  "partial": 0,
+  "failed": 0,
+  "unparsed": 0,
+  "counterexamples": 0,
+  "by_message_type": {
+    "unlabelled:matched": 16
+  },
+  "verdict": "consistent_with_corpus",
+  "notes": [
+    "'Supported by observed data' means the rule held for every message in this corpus. It is not a proof that the rule is universally correct."
+  ]
+}

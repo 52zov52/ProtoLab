@@ -1,0 +1,1309 @@
+{
+  "run_id": "ab507dd0c1784c4287624e04ccac8a3a",
+  "count": 28,
+  "counterexamples": [
+    {
+      "result_id": "82830eeb19db4052984668023091f746",
+      "message_id": "281f5896a3f74812a2921a78e305e083",
+      "stream_id": "0eabb9e5fa784ea1b642ba909248b591",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 0,
+      "end_offset": 18,
+      "length": 18,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 12,
+          "declared": 2100,
+          "computed": 2100,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 104,
+          "start_offset": 0,
+          "end_offset": 3
+        },
+        {
+          "packet_index": 106,
+          "start_offset": 3,
+          "end_offset": 5
+        },
+        {
+          "packet_index": 108,
+          "start_offset": 5,
+          "end_offset": 17
+        },
+        {
+          "packet_index": 110,
+          "start_offset": 17,
+          "end_offset": 18
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 0,
+          "end_offset": 18,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 0..18 (18 bytes, capture message #0): ?: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "f5b8aa222d984295959838a72afad0d2",
+      "message_id": "d526bdf6713f477dad31e2ba727cfbc8",
+      "stream_id": "0eabb9e5fa784ea1b642ba909248b591",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 18,
+      "end_offset": 39,
+      "length": 21,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 15,
+          "declared": 23151,
+          "computed": 23151,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 120,
+          "start_offset": 18,
+          "end_offset": 39
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 18,
+          "end_offset": 39,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 18..39 (21 bytes, capture message #1): ?: the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "8f48b09410e24992a8814dfe25bbf4e4",
+      "message_id": "d9cb9ccdd0104acebfb5f0ccb31814e0",
+      "stream_id": "0eabb9e5fa784ea1b642ba909248b591",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 39,
+      "end_offset": 63,
+      "length": 24,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 18 declares 19 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 18,
+          "declared": 19,
+          "computed": 19,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 124,
+          "start_offset": 39,
+          "end_offset": 42
+        },
+        {
+          "packet_index": 126,
+          "start_offset": 42,
+          "end_offset": 44
+        },
+        {
+          "packet_index": 128,
+          "start_offset": 44,
+          "end_offset": 56
+        },
+        {
+          "packet_index": 130,
+          "start_offset": 56,
+          "end_offset": 63
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 39,
+          "end_offset": 63,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 39..63 (24 bytes, capture message #2): ?: the length field at offset 18 declares 19 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "775bc13009264ab0aaba10f0b03917a1",
+      "message_id": "91e5c09acf78473aac599b0a0e48534a",
+      "stream_id": "0eabb9e5fa784ea1b642ba909248b591",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 63,
+      "end_offset": 84,
+      "length": 21,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 15,
+          "declared": 23151,
+          "computed": 23151,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 138,
+          "start_offset": 63,
+          "end_offset": 84
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 63,
+          "end_offset": 84,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 63..84 (21 bytes, capture message #3): ?: the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "fc5a14f76a9b4ca998833fbec095fd25",
+      "message_id": "e484f32060994d1d9e0d51e33e65b993",
+      "stream_id": "0eabb9e5fa784ea1b642ba909248b591",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 84,
+      "end_offset": 122,
+      "length": 38,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 32 declares 27 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 32,
+          "declared": 27,
+          "computed": 27,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 146,
+          "start_offset": 84,
+          "end_offset": 87
+        },
+        {
+          "packet_index": 148,
+          "start_offset": 87,
+          "end_offset": 89
+        },
+        {
+          "packet_index": 150,
+          "start_offset": 89,
+          "end_offset": 101
+        },
+        {
+          "packet_index": 152,
+          "start_offset": 101,
+          "end_offset": 122
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 84,
+          "end_offset": 122,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 84..122 (38 bytes, capture message #4): ?: the length field at offset 32 declares 27 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "3528e1a2475f4f2c8c30dd1a7c8c65ec",
+      "message_id": "e3dacea85e104efdb8009bad6745997f",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 0,
+      "end_offset": 8,
+      "length": 8,
+      "violated_rule": "invalid_length",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "invalid_length",
+          "message": "declared length 0 at offset 2 does not produce a positive message size; framing stopped",
+          "offset": 2,
+          "declared": 0
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 3,
+          "start_offset": 0,
+          "end_offset": 3
+        },
+        {
+          "packet_index": 5,
+          "start_offset": 3,
+          "end_offset": 5
+        },
+        {
+          "packet_index": 7,
+          "start_offset": 5,
+          "end_offset": 8
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 0,
+          "end_offset": 8,
+          "rule": "invalid_length"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 0..8 (8 bytes, capture message #0): ?: declared length 0 at offset 2 does not produce a positive message size; framing stopped."
+    },
+    {
+      "result_id": "e5b4d085c0034d4ebd4d36fc529fa0cd",
+      "message_id": "77eda78189ae4586bf2d38e1b0d50341",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 8,
+      "end_offset": 25,
+      "length": 17,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 11,
+          "declared": 2100,
+          "computed": 2100,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 17,
+          "start_offset": 8,
+          "end_offset": 11
+        },
+        {
+          "packet_index": 19,
+          "start_offset": 11,
+          "end_offset": 13
+        },
+        {
+          "packet_index": 21,
+          "start_offset": 13,
+          "end_offset": 25
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 8,
+          "end_offset": 25,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 8..25 (17 bytes, capture message #1): ?: the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "5435f6baa17b49f58a91f4cbf0a3b7eb",
+      "message_id": "d1f50a9a5d5c4bb3bc8a8e60ff0ed126",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 25,
+      "end_offset": 34,
+      "length": 9,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 3,
+          "declared": 256,
+          "computed": 256,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 25,
+          "start_offset": 25,
+          "end_offset": 34
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 25,
+          "end_offset": 34,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 25..34 (9 bytes, capture message #2): ?: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "710754445d1041a98195825f02645537",
+      "message_id": "40fc447ee77241e8a05dbbf77a261b3a",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 34,
+      "end_offset": 51,
+      "length": 17,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 11 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 11,
+          "declared": 1900,
+          "computed": 1900,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 33,
+          "start_offset": 34,
+          "end_offset": 37
+        },
+        {
+          "packet_index": 35,
+          "start_offset": 37,
+          "end_offset": 39
+        },
+        {
+          "packet_index": 37,
+          "start_offset": 39,
+          "end_offset": 51
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 34,
+          "end_offset": 51,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 34..51 (17 bytes, capture message #3): ?: the length field at offset 11 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "c270525684d84f4eb4dac05bf0ba4c97",
+      "message_id": "fc557f92a2b24b57bfa6ed1764d0cb2f",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 51,
+      "end_offset": 60,
+      "length": 9,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 3,
+          "declared": 256,
+          "computed": 256,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 41,
+          "start_offset": 51,
+          "end_offset": 54
+        },
+        {
+          "packet_index": 43,
+          "start_offset": 54,
+          "end_offset": 56
+        },
+        {
+          "packet_index": 45,
+          "start_offset": 56,
+          "end_offset": 60
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 51,
+          "end_offset": 60,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 51..60 (9 bytes, capture message #4): ?: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "4d75a62b24f24eb59f4f1d4456a52c2f",
+      "message_id": "cce9743edeea402b9ecae23e4d189eb7",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 60,
+      "end_offset": 68,
+      "length": 8,
+      "violated_rule": "invalid_length",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "invalid_length",
+          "message": "declared length 0 at offset 2 does not produce a positive message size; framing stopped",
+          "offset": 2,
+          "declared": 0
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 55,
+          "start_offset": 60,
+          "end_offset": 68
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 60,
+          "end_offset": 68,
+          "rule": "invalid_length"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 60..68 (8 bytes, capture message #5): ?: declared length 0 at offset 2 does not produce a positive message size; framing stopped."
+    },
+    {
+      "result_id": "4974bd42a17c4fd5a31ba96f7919e550",
+      "message_id": "979993b4d6b7473f8bfb9e331fd47b44",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 68,
+      "end_offset": 85,
+      "length": 17,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 11,
+          "declared": 2100,
+          "computed": 2100,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 59,
+          "start_offset": 68,
+          "end_offset": 71
+        },
+        {
+          "packet_index": 61,
+          "start_offset": 71,
+          "end_offset": 73
+        },
+        {
+          "packet_index": 63,
+          "start_offset": 73,
+          "end_offset": 85
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 68,
+          "end_offset": 85,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 68..85 (17 bytes, capture message #6): ?: the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "079d91e314d34ba3b62fb7c984aac010",
+      "message_id": "7a7a0eaa93f64db7b24fee223113a56b",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 85,
+      "end_offset": 94,
+      "length": 9,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 3,
+          "declared": 256,
+          "computed": 256,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 73,
+          "start_offset": 85,
+          "end_offset": 88
+        },
+        {
+          "packet_index": 75,
+          "start_offset": 88,
+          "end_offset": 90
+        },
+        {
+          "packet_index": 77,
+          "start_offset": 90,
+          "end_offset": 94
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 85,
+          "end_offset": 94,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 85..94 (9 bytes, capture message #7): ?: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "5a318623a5784a84b5de74896945bf0b",
+      "message_id": "67f90d2b3e0d43b583599e1c8a51a61b",
+      "stream_id": "3bf52f7692824aea80b407032830698b",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 94,
+      "end_offset": 102,
+      "length": 8,
+      "violated_rule": "invalid_length",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "invalid_length",
+          "message": "declared length 0 at offset 2 does not produce a positive message size; framing stopped",
+          "offset": 2,
+          "declared": 0
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 81,
+          "start_offset": 94,
+          "end_offset": 102
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 94,
+          "end_offset": 102,
+          "rule": "invalid_length"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 94..102 (8 bytes, capture message #8): ?: declared length 0 at offset 2 does not produce a positive message size; framing stopped."
+    },
+    {
+      "result_id": "e7405309ddd54d7bb111b278c8b2e863",
+      "message_id": "24b7e8650c054609b063f437f4c33515",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 0,
+      "end_offset": 18,
+      "length": 18,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 12,
+          "declared": 2100,
+          "computed": 2100,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 9,
+          "start_offset": 0,
+          "end_offset": 3
+        },
+        {
+          "packet_index": 11,
+          "start_offset": 3,
+          "end_offset": 5
+        },
+        {
+          "packet_index": 13,
+          "start_offset": 5,
+          "end_offset": 17
+        },
+        {
+          "packet_index": 15,
+          "start_offset": 17,
+          "end_offset": 18
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 0,
+          "end_offset": 18,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 0..18 (18 bytes, capture message #0): ?: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "4ed298f5bfaf4fedb5bf995bd4dedc76",
+      "message_id": "194aa8405e1d4929bc2f7e52a9cb55f3",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 18,
+      "end_offset": 36,
+      "length": 18,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 12,
+          "declared": 2100,
+          "computed": 2100,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 23,
+          "start_offset": 18,
+          "end_offset": 36
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 18,
+          "end_offset": 36,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 18..36 (18 bytes, capture message #1): ?: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "7dd8baaa09e84449ae1887d078866442",
+      "message_id": "bd9db31f36c743d5893c371a6314db10",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 36,
+      "end_offset": 53,
+      "length": 17,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 14 declares 1850 bytes but the message holds only 5. This framing convention does not hold for the message.",
+          "offset": 14,
+          "declared": 1850,
+          "computed": 1850,
+          "available": 5
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 27,
+          "start_offset": 36,
+          "end_offset": 39
+        },
+        {
+          "packet_index": 29,
+          "start_offset": 39,
+          "end_offset": 41
+        },
+        {
+          "packet_index": 31,
+          "start_offset": 41,
+          "end_offset": 53
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 36,
+          "end_offset": 53,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 36..53 (17 bytes, capture message #2): ?: the length field at offset 14 declares 1850 bytes but the message holds only 5. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "74105a14e25b40b6928fc22c8f9c5327",
+      "message_id": "308cca4de7bc44b0aaf27aa2e3c99714",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 53,
+      "end_offset": 71,
+      "length": 18,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 12,
+          "declared": 1900,
+          "computed": 1900,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 39,
+          "start_offset": 53,
+          "end_offset": 71
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 53,
+          "end_offset": 71,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 53..71 (18 bytes, capture message #3): ?: the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "7747fdff57f542c6a8e8841edf6d2b2e",
+      "message_id": "f4c3d6700b044c94bfe53f39182cb6ec",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 71,
+      "end_offset": 102,
+      "length": 31,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 25 declares 15 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 25,
+          "declared": 15,
+          "computed": 15,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 47,
+          "start_offset": 71,
+          "end_offset": 74
+        },
+        {
+          "packet_index": 49,
+          "start_offset": 74,
+          "end_offset": 76
+        },
+        {
+          "packet_index": 51,
+          "start_offset": 76,
+          "end_offset": 88
+        },
+        {
+          "packet_index": 53,
+          "start_offset": 88,
+          "end_offset": 102
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 71,
+          "end_offset": 102,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 71..102 (31 bytes, capture message #4): ?: the length field at offset 25 declares 15 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "e8bdf3cbd0a84a63991ae58e3c1fb9ed",
+      "message_id": "6860a7f0101744ddba13971deeec2538",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 102,
+      "end_offset": 120,
+      "length": 18,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 12,
+          "declared": 1900,
+          "computed": 1900,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 57,
+          "start_offset": 102,
+          "end_offset": 120
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 102,
+          "end_offset": 120,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 102..120 (18 bytes, capture message #5): ?: the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "e2e9fffab2514fe69068159b668bb58c",
+      "message_id": "0d51cf75cfd1432fa228a2222d026107",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 120,
+      "end_offset": 138,
+      "length": 18,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 12,
+          "declared": 2100,
+          "computed": 2100,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 65,
+          "start_offset": 120,
+          "end_offset": 123
+        },
+        {
+          "packet_index": 67,
+          "start_offset": 123,
+          "end_offset": 125
+        },
+        {
+          "packet_index": 69,
+          "start_offset": 125,
+          "end_offset": 137
+        },
+        {
+          "packet_index": 71,
+          "start_offset": 137,
+          "end_offset": 138
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 120,
+          "end_offset": 138,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 120..138 (18 bytes, capture message #6): ?: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "856241c2f18e45d5a7467b961ee6b59b",
+      "message_id": "a64da7ff91bb499793fff10383a2a5b5",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 138,
+      "end_offset": 147,
+      "length": 9,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 3,
+          "declared": 256,
+          "computed": 256,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 79,
+          "start_offset": 138,
+          "end_offset": 147
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 138,
+          "end_offset": 147,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 138..147 (9 bytes, capture message #7): ?: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "402da9c4b8c64694bc79b11802eff06f",
+      "message_id": "39659c8f5fbc4e98ac976d8bf4f58827",
+      "stream_id": "6c6006be57704940a5c84e48797f45fd",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 147,
+      "end_offset": 165,
+      "length": 18,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 12,
+          "declared": 2100,
+          "computed": 2100,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 83,
+          "start_offset": 147,
+          "end_offset": 150
+        },
+        {
+          "packet_index": 85,
+          "start_offset": 150,
+          "end_offset": 152
+        },
+        {
+          "packet_index": 87,
+          "start_offset": 152,
+          "end_offset": 164
+        },
+        {
+          "packet_index": 89,
+          "start_offset": 164,
+          "end_offset": 165
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 147,
+          "end_offset": 165,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 147..165 (18 bytes, capture message #8): ?: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "8ba3ac92695d4d6db8177e28a23d40f0",
+      "message_id": "4c720476c80b4006994e844d6b5a67c2",
+      "stream_id": "8409a1cdab044cd89038798a6676b567",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 0,
+      "end_offset": 8,
+      "length": 8,
+      "violated_rule": "invalid_length",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "invalid_length",
+          "message": "declared length 0 at offset 2 does not produce a positive message size; framing stopped",
+          "offset": 2,
+          "declared": 0
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 98,
+          "start_offset": 0,
+          "end_offset": 3
+        },
+        {
+          "packet_index": 100,
+          "start_offset": 3,
+          "end_offset": 5
+        },
+        {
+          "packet_index": 102,
+          "start_offset": 5,
+          "end_offset": 8
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 0,
+          "end_offset": 8,
+          "rule": "invalid_length"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 0..8 (8 bytes, capture message #0): ?: declared length 0 at offset 2 does not produce a positive message size; framing stopped."
+    },
+    {
+      "result_id": "f06cf9412bbf45a195a16e1e9dc841f5",
+      "message_id": "c311b839d6e743cea416642c85488fd0",
+      "stream_id": "8409a1cdab044cd89038798a6676b567",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 8,
+      "end_offset": 28,
+      "length": 20,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 14 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 14,
+          "declared": 23151,
+          "computed": 23151,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 112,
+          "start_offset": 8,
+          "end_offset": 11
+        },
+        {
+          "packet_index": 114,
+          "start_offset": 11,
+          "end_offset": 13
+        },
+        {
+          "packet_index": 116,
+          "start_offset": 13,
+          "end_offset": 25
+        },
+        {
+          "packet_index": 118,
+          "start_offset": 25,
+          "end_offset": 28
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 8,
+          "end_offset": 28,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 8..28 (20 bytes, capture message #1): ?: the length field at offset 14 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "fd1a7916af494f678dfaef5bf5a72907",
+      "message_id": "a235636d672c4386a26cc944d1a0449e",
+      "stream_id": "8409a1cdab044cd89038798a6676b567",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 28,
+      "end_offset": 37,
+      "length": 9,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 3,
+          "declared": 256,
+          "computed": 256,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 122,
+          "start_offset": 28,
+          "end_offset": 37
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 28,
+          "end_offset": 37,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 28..37 (9 bytes, capture message #2): ?: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    },
+    {
+      "result_id": "8884d3ac399f4c4290d67791b27c26c4",
+      "message_id": "10a4f3ba78534ffc8dfa27da65891071",
+      "stream_id": "8409a1cdab044cd89038798a6676b567",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 37,
+      "end_offset": 45,
+      "length": 8,
+      "violated_rule": "invalid_length",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "invalid_length",
+          "message": "declared length 0 at offset 2 does not produce a positive message size; framing stopped",
+          "offset": 2,
+          "declared": 0
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 132,
+          "start_offset": 37,
+          "end_offset": 40
+        },
+        {
+          "packet_index": 134,
+          "start_offset": 40,
+          "end_offset": 42
+        },
+        {
+          "packet_index": 136,
+          "start_offset": 42,
+          "end_offset": 45
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 37,
+          "end_offset": 45,
+          "rule": "invalid_length"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 37..45 (8 bytes, capture message #3): ?: declared length 0 at offset 2 does not produce a positive message size; framing stopped."
+    },
+    {
+      "result_id": "1adcadae1c094e68aaede2e2ff35d8e6",
+      "message_id": "a21b0245215d44fb99155edcabb29186",
+      "stream_id": "8409a1cdab044cd89038798a6676b567",
+      "capture_id": "fbc07fc592684c188534198417f0fac8",
+      "start_offset": 45,
+      "end_offset": 54,
+      "length": 9,
+      "violated_rule": "declared_length_exceeds_message",
+      "reasons": [
+        {
+          "severity": "error",
+          "code": "declared_length_exceeds_message",
+          "message": "the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.",
+          "offset": 3,
+          "declared": 256,
+          "computed": 256,
+          "available": 8
+        }
+      ],
+      "extracted_fields": {},
+      "evidence": [
+        {
+          "packet_index": 140,
+          "start_offset": 45,
+          "end_offset": 48
+        },
+        {
+          "packet_index": 142,
+          "start_offset": 48,
+          "end_offset": 50
+        },
+        {
+          "packet_index": 144,
+          "start_offset": 50,
+          "end_offset": 54
+        },
+        {
+          "kind": "framing_violation",
+          "start_offset": 45,
+          "end_offset": 54,
+          "rule": "declared_length_exceeds_message"
+        }
+      ],
+      "alternative_explanations": [
+        "No alternative reading could be derived automatically; inspect the raw bytes for this message in the stream viewer."
+      ],
+      "explanation": "Rule violated at stream offsets 45..54 (9 bytes, capture message #4): ?: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.."
+    }
+  ],
+  "disclaimer": "A counterexample shows where the rule did not hold on this corpus. It does not by itself prove the rule is wrong; a gap in the capture is an equally valid explanation until ruled out."
+}

@@ -30,17 +30,9 @@ def _service(session, storage):
 
 
 def _interpretation_payload(row: Interpretation) -> dict:
-    return {
-        "id": row.id,
-        "project_id": row.project_id,
-        "hypothesis_id": row.hypothesis_id,
-        "name": row.name,
-        "specification": row.schema_json,
-        "version": row.version,
-        "checksum": row.checksum,
-        "created_at": row.created_at,
-        "notes": row.notes,
-    }
+    from ...services.interpretation_service import interpretation_payload
+
+    return interpretation_payload(row)
 
 
 @router.post("/hypotheses", response_model=HypothesisOut, status_code=status.HTTP_201_CREATED)

@@ -1,0 +1,342 @@
+{
+  "id": "3302012f762b41f5b7bf4d424e8e5963",
+  "project_id": "92eb0f0091054577b4484035e502452e",
+  "title": "Термостенд: recovered exchange",
+  "generator": "template",
+  "created_at": "2026-10-12T16:08:05.720208",
+  "sections": [
+    {
+      "number": 1,
+      "title": "Project",
+      "body": "**Thermostand example**\n\n_No description recorded._",
+      "evidence": [
+        {
+          "kind": "project",
+          "id": "92eb0f0091054577b4484035e502452e"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "number": 2,
+      "title": "Source captures",
+      "body": "- `01_configuration.pcap` - format pcap, 12207 bytes, SHA-256 `6e9019561d4ae13c0622dc2ba11e87edc27addfe4679b23f65a3d9a57e387f7a`, analysis: completed",
+      "evidence": [
+        {
+          "kind": "capture",
+          "id": "fbc07fc592684c188534198417f0fac8",
+          "sha256": "6e9019561d4ae13c0622dc2ba11e87edc27addfe4679b23f65a3d9a57e387f7a"
+        }
+      ],
+      "notes": [
+        "SHA-256 lets a reader confirm they hold the same bytes; it does not prove where the file came from."
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Experiment conditions",
+      "body": "_No experiment log imported._",
+      "evidence": [],
+      "notes": []
+    },
+    {
+      "number": 4,
+      "title": "Corpus examined",
+      "body": "- tcp_sessions: 2\n- streams: 4\n- messages: 28\n- bytes_in_streams: 443",
+      "evidence": [
+        {
+          "kind": "session",
+          "id": "c0e341a2e8914c89a15c130239b77469"
+        },
+        {
+          "kind": "session",
+          "id": "c73302a251af438aba0069924c49a58d"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "number": 5,
+      "title": "TCP sessions observed",
+      "body": "- `10.77.0.10:42010` in 2 session(s)\n- `10.77.0.20:46123` in 2 session(s)",
+      "evidence": [
+        {
+          "kind": "session",
+          "id": "c0e341a2e8914c89a15c130239b77469"
+        },
+        {
+          "kind": "session",
+          "id": "c73302a251af438aba0069924c49a58d"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "number": 6,
+      "title": "Observed patterns",
+      "body": "- 4 stream(s) classified as `unknown_binary`\n- message lengths range from 8 to 38 bytes (9 distinct values over 28 messages)",
+      "evidence": [],
+      "notes": [
+        "Each pattern above is a description of observed bytes, not a claim about meaning."
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Proposed protocol structure",
+      "body": "- **Thermostand message layout** (v2, checksum `7a47b2acca1f79c8`)\n  - framing: `length_prefix`\n  - fields: magic:uint16@0, payload_length:uint16@2, request_id:uint16@4, flags:uint8@6, command:enum@7",
+      "evidence": [
+        {
+          "kind": "interpretation",
+          "id": "a05fad8bd5cc455d8877db16f790cb39",
+          "version": 2
+        }
+      ],
+      "notes": [
+        "Field names are analyst labels unless marked otherwise in the specification."
+      ]
+    },
+    {
+      "number": 8,
+      "title": "Validated rules",
+      "body": "- run `ab507dd0c1784c4287624e04ccac8a3a` on 2026-10-12T16:08:05.621520: contradicted - matched 0, failed 28 of 28  **(stale: rule changed afterwards)**\n- run `e4af9451f7eb406dac813867e2e29201` on 2026-10-12T16:08:05.650353: consistent_with_corpus - matched 28, failed 0 of 28\n- run `5b97abb809104b88a4be563f6c6060f5` on 2026-10-12T16:08:05.684252: consistent_with_corpus - matched 16, failed 0 of 16",
+      "evidence": [
+        {
+          "kind": "validation_run",
+          "id": "ab507dd0c1784c4287624e04ccac8a3a"
+        },
+        {
+          "kind": "validation_run",
+          "id": "e4af9451f7eb406dac813867e2e29201"
+        },
+        {
+          "kind": "validation_run",
+          "id": "5b97abb809104b88a4be563f6c6060f5"
+        }
+      ],
+      "notes": [
+        "A rule that held across a corpus is supported by that corpus. It is not proven for data that has not been observed."
+      ]
+    },
+    {
+      "number": 9,
+      "title": "Counterexamples",
+      "body": "- message `281f5896a3f74812a2921a78e305e083`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `d526bdf6713f477dad31e2ba727cfbc8`: the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `d9cb9ccdd0104acebfb5f0ccb31814e0`: the length field at offset 18 declares 19 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `91e5c09acf78473aac599b0a0e48534a`: the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `e484f32060994d1d9e0d51e33e65b993`: the length field at offset 32 declares 27 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `e3dacea85e104efdb8009bad6745997f`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `77eda78189ae4586bf2d38e1b0d50341`: the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `d1f50a9a5d5c4bb3bc8a8e60ff0ed126`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `40fc447ee77241e8a05dbbf77a261b3a`: the length field at offset 11 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `fc557f92a2b24b57bfa6ed1764d0cb2f`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `cce9743edeea402b9ecae23e4d189eb7`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `979993b4d6b7473f8bfb9e331fd47b44`: the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `7a7a0eaa93f64db7b24fee223113a56b`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `67f90d2b3e0d43b583599e1c8a51a61b`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `24b7e8650c054609b063f437f4c33515`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `194aa8405e1d4929bc2f7e52a9cb55f3`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `bd9db31f36c743d5893c371a6314db10`: the length field at offset 14 declares 1850 bytes but the message holds only 5. This framing convention does not hold for the message.\n- message `308cca4de7bc44b0aaf27aa2e3c99714`: the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `f4c3d6700b044c94bfe53f39182cb6ec`: the length field at offset 25 declares 15 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `6860a7f0101744ddba13971deeec2538`: the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `0d51cf75cfd1432fa228a2222d026107`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `a64da7ff91bb499793fff10383a2a5b5`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `39659c8f5fbc4e98ac976d8bf4f58827`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `4c720476c80b4006994e844d6b5a67c2`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `c311b839d6e743cea416642c85488fd0`: the length field at offset 14 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `a235636d672c4386a26cc944d1a0449e`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `10a4f3ba78534ffc8dfa27da65891071`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `a21b0245215d44fb99155edcabb29186`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.",
+      "evidence": [
+        {
+          "kind": "validation_result",
+          "id": "82830eeb19db4052984668023091f746",
+          "message_id": "281f5896a3f74812a2921a78e305e083"
+        },
+        {
+          "kind": "validation_result",
+          "id": "f5b8aa222d984295959838a72afad0d2",
+          "message_id": "d526bdf6713f477dad31e2ba727cfbc8"
+        },
+        {
+          "kind": "validation_result",
+          "id": "8f48b09410e24992a8814dfe25bbf4e4",
+          "message_id": "d9cb9ccdd0104acebfb5f0ccb31814e0"
+        },
+        {
+          "kind": "validation_result",
+          "id": "775bc13009264ab0aaba10f0b03917a1",
+          "message_id": "91e5c09acf78473aac599b0a0e48534a"
+        },
+        {
+          "kind": "validation_result",
+          "id": "fc5a14f76a9b4ca998833fbec095fd25",
+          "message_id": "e484f32060994d1d9e0d51e33e65b993"
+        },
+        {
+          "kind": "validation_result",
+          "id": "3528e1a2475f4f2c8c30dd1a7c8c65ec",
+          "message_id": "e3dacea85e104efdb8009bad6745997f"
+        },
+        {
+          "kind": "validation_result",
+          "id": "e5b4d085c0034d4ebd4d36fc529fa0cd",
+          "message_id": "77eda78189ae4586bf2d38e1b0d50341"
+        },
+        {
+          "kind": "validation_result",
+          "id": "5435f6baa17b49f58a91f4cbf0a3b7eb",
+          "message_id": "d1f50a9a5d5c4bb3bc8a8e60ff0ed126"
+        },
+        {
+          "kind": "validation_result",
+          "id": "710754445d1041a98195825f02645537",
+          "message_id": "40fc447ee77241e8a05dbbf77a261b3a"
+        },
+        {
+          "kind": "validation_result",
+          "id": "c270525684d84f4eb4dac05bf0ba4c97",
+          "message_id": "fc557f92a2b24b57bfa6ed1764d0cb2f"
+        },
+        {
+          "kind": "validation_result",
+          "id": "4d75a62b24f24eb59f4f1d4456a52c2f",
+          "message_id": "cce9743edeea402b9ecae23e4d189eb7"
+        },
+        {
+          "kind": "validation_result",
+          "id": "4974bd42a17c4fd5a31ba96f7919e550",
+          "message_id": "979993b4d6b7473f8bfb9e331fd47b44"
+        },
+        {
+          "kind": "validation_result",
+          "id": "079d91e314d34ba3b62fb7c984aac010",
+          "message_id": "7a7a0eaa93f64db7b24fee223113a56b"
+        },
+        {
+          "kind": "validation_result",
+          "id": "5a318623a5784a84b5de74896945bf0b",
+          "message_id": "67f90d2b3e0d43b583599e1c8a51a61b"
+        },
+        {
+          "kind": "validation_result",
+          "id": "e7405309ddd54d7bb111b278c8b2e863",
+          "message_id": "24b7e8650c054609b063f437f4c33515"
+        },
+        {
+          "kind": "validation_result",
+          "id": "4ed298f5bfaf4fedb5bf995bd4dedc76",
+          "message_id": "194aa8405e1d4929bc2f7e52a9cb55f3"
+        },
+        {
+          "kind": "validation_result",
+          "id": "7dd8baaa09e84449ae1887d078866442",
+          "message_id": "bd9db31f36c743d5893c371a6314db10"
+        },
+        {
+          "kind": "validation_result",
+          "id": "74105a14e25b40b6928fc22c8f9c5327",
+          "message_id": "308cca4de7bc44b0aaf27aa2e3c99714"
+        },
+        {
+          "kind": "validation_result",
+          "id": "7747fdff57f542c6a8e8841edf6d2b2e",
+          "message_id": "f4c3d6700b044c94bfe53f39182cb6ec"
+        },
+        {
+          "kind": "validation_result",
+          "id": "e8bdf3cbd0a84a63991ae58e3c1fb9ed",
+          "message_id": "6860a7f0101744ddba13971deeec2538"
+        },
+        {
+          "kind": "validation_result",
+          "id": "e2e9fffab2514fe69068159b668bb58c",
+          "message_id": "0d51cf75cfd1432fa228a2222d026107"
+        },
+        {
+          "kind": "validation_result",
+          "id": "856241c2f18e45d5a7467b961ee6b59b",
+          "message_id": "a64da7ff91bb499793fff10383a2a5b5"
+        },
+        {
+          "kind": "validation_result",
+          "id": "402da9c4b8c64694bc79b11802eff06f",
+          "message_id": "39659c8f5fbc4e98ac976d8bf4f58827"
+        },
+        {
+          "kind": "validation_result",
+          "id": "8ba3ac92695d4d6db8177e28a23d40f0",
+          "message_id": "4c720476c80b4006994e844d6b5a67c2"
+        },
+        {
+          "kind": "validation_result",
+          "id": "f06cf9412bbf45a195a16e1e9dc841f5",
+          "message_id": "c311b839d6e743cea416642c85488fd0"
+        },
+        {
+          "kind": "validation_result",
+          "id": "fd1a7916af494f678dfaef5bf5a72907",
+          "message_id": "a235636d672c4386a26cc944d1a0449e"
+        },
+        {
+          "kind": "validation_result",
+          "id": "8884d3ac399f4c4290d67791b27c26c4",
+          "message_id": "10a4f3ba78534ffc8dfa27da65891071"
+        },
+        {
+          "kind": "validation_result",
+          "id": "1adcadae1c094e68aaede2e2ff35d8e6",
+          "message_id": "a21b0245215d44fb99155edcabb29186"
+        }
+      ],
+      "notes": [
+        "A counterexample may be a wrong rule or an incomplete capture; both explanations are kept until one is ruled out."
+      ]
+    },
+    {
+      "number": 10,
+      "title": "Unresolved regions",
+      "body": "- `Thermostand message layout` leaves flags unexplained",
+      "evidence": [],
+      "notes": []
+    },
+    {
+      "number": 11,
+      "title": "Capture quality diagnostics",
+      "body": "- 1 of 2 sessions were not fully captured\n- 0 stream(s) had no observed connection start\n- source integrity: all files match their recorded hashes",
+      "evidence": [],
+      "notes": []
+    },
+    {
+      "number": 12,
+      "title": "Limitations",
+      "body": "- Conclusions cover only the captures listed above.\n- A reconstructed stream can be incomplete; gaps are shown, never filled.\n- Conflicting bytes at overlapping offsets were resolved by the recorded policy, and both variants remain recorded.\n- Field semantics are analyst hypotheses until a validation run supports them.\n- No claim here has been confirmed against the device documentation.",
+      "evidence": [],
+      "notes": []
+    },
+    {
+      "number": 13,
+      "title": "Conclusions",
+      "body": "- 1 hypothesis/hypotheses are supported by every message in the current corpus.\n- 28 message(s) contradict the current rules and remain unresolved.",
+      "evidence": [],
+      "notes": []
+    },
+    {
+      "number": 14,
+      "title": "Recommended next experiments",
+      "body": "- Import the experiment action log so messages can be tied to the action that produced them.\n- Capture a second recording of the same action sequence and validate the current rules against it.\n- Vary one parameter at a time so its field can be isolated by correlation.\n- Record a session that starts at connection establishment so the stream has no unknown prefix.\n- Investigate the counterexamples above before extending the rules further.",
+      "evidence": [],
+      "notes": []
+    },
+    {
+      "number": 15,
+      "title": "Reproduction instructions",
+      "body": "1. Import the .mplab project archive (or the individual PCAP files listed above).\n2. Re-run capture analysis with the recorded options.\n   Analysis options used: `{\"conflict_policy\": \"first_writer_wins\", \"detect_protocol\": true, \"flow_policy\": \"syn_fin_rst_idle\", \"framing\": {\"config\": {\"endianness\": \"big\", \"header_size\": 8, \"includes_header\": \"false\", \"length_offset\": 2, \"length_size\": 2, \"max_length\": 1048576}, \"method\": \"length_prefix\"}, \"idle_timeout\": 120.0}`\n3. Import the interpretation specification(s) - the checksum is printed in section 7.\n4. Run validation against the same corpus; the verdict must match section 8.",
+      "evidence": [],
+      "notes": []
+    }
+  ],
+  "facts": {
+    "captures": [
+      "fbc07fc592684c188534198417f0fac8"
+    ],
+    "sessions": 2,
+    "streams": 4,
+    "messages": 28,
+    "hypotheses": [
+      "f6d8ca417fd94c7dbc6a9adae605b0c8"
+    ],
+    "interpretations": [
+      {
+        "id": "a05fad8bd5cc455d8877db16f790cb39",
+        "version": 2,
+        "checksum": "7a47b2acca1f79c8f38a87c04840176b94784ac827fc9e46b5fcce7604c07606"
+      }
+    ],
+    "validation_runs": [
+      "ab507dd0c1784c4287624e04ccac8a3a",
+      "e4af9451f7eb406dac813867e2e29201",
+      "5b97abb809104b88a4be563f6c6060f5"
+    ],
+    "counterexamples": 28,
+    "integrity": true
+  },
+  "ai_used": false,
+  "ai_model": null,
+  "ai_warnings": [],
+  "markdown": "# Термостенд: recovered exchange\n\n_Generated by Madrigal Protocol Lab (report/1.1) on 2026-10-12T16:08:05.719532+00:00_\n\n## 1. Project\n\n**Thermostand example**\n\n_No description recorded._\n\n_Evidence: project:92eb0f0091054577b4484035e502452e_\n\n## 2. Source captures\n\n- `01_configuration.pcap` - format pcap, 12207 bytes, SHA-256 `6e9019561d4ae13c0622dc2ba11e87edc27addfe4679b23f65a3d9a57e387f7a`, analysis: completed\n\n_Evidence: capture:fbc07fc592684c188534198417f0fac8_\n\n> SHA-256 lets a reader confirm they hold the same bytes; it does not prove where the file came from.\n\n## 3. Experiment conditions\n\n_No experiment log imported._\n\n## 4. Corpus examined\n\n- tcp_sessions: 2\n- streams: 4\n- messages: 28\n- bytes_in_streams: 443\n\n_Evidence: session:c0e341a2e8914c89a15c130239b77469, session:c73302a251af438aba0069924c49a58d_\n\n## 5. TCP sessions observed\n\n- `10.77.0.10:42010` in 2 session(s)\n- `10.77.0.20:46123` in 2 session(s)\n\n_Evidence: session:c0e341a2e8914c89a15c130239b77469, session:c73302a251af438aba0069924c49a58d_\n\n## 6. Observed patterns\n\n- 4 stream(s) classified as `unknown_binary`\n- message lengths range from 8 to 38 bytes (9 distinct values over 28 messages)\n\n> Each pattern above is a description of observed bytes, not a claim about meaning.\n\n## 7. Proposed protocol structure\n\n- **Thermostand message layout** (v2, checksum `7a47b2acca1f79c8`)\n  - framing: `length_prefix`\n  - fields: magic:uint16@0, payload_length:uint16@2, request_id:uint16@4, flags:uint8@6, command:enum@7\n\n_Evidence: interpretation:a05fad8bd5cc455d8877db16f790cb39_\n\n> Field names are analyst labels unless marked otherwise in the specification.\n\n## 8. Validated rules\n\n- run `ab507dd0c1784c4287624e04ccac8a3a` on 2026-10-12T16:08:05.621520: contradicted - matched 0, failed 28 of 28  **(stale: rule changed afterwards)**\n- run `e4af9451f7eb406dac813867e2e29201` on 2026-10-12T16:08:05.650353: consistent_with_corpus - matched 28, failed 0 of 28\n- run `5b97abb809104b88a4be563f6c6060f5` on 2026-10-12T16:08:05.684252: consistent_with_corpus - matched 16, failed 0 of 16\n\n_Evidence: validation_run:ab507dd0c1784c4287624e04ccac8a3a, validation_run:e4af9451f7eb406dac813867e2e29201, validation_run:5b97abb809104b88a4be563f6c6060f5_\n\n> A rule that held across a corpus is supported by that corpus. It is not proven for data that has not been observed.\n\n## 9. Counterexamples\n\n- message `281f5896a3f74812a2921a78e305e083`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `d526bdf6713f477dad31e2ba727cfbc8`: the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `d9cb9ccdd0104acebfb5f0ccb31814e0`: the length field at offset 18 declares 19 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `91e5c09acf78473aac599b0a0e48534a`: the length field at offset 15 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `e484f32060994d1d9e0d51e33e65b993`: the length field at offset 32 declares 27 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `e3dacea85e104efdb8009bad6745997f`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `77eda78189ae4586bf2d38e1b0d50341`: the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `d1f50a9a5d5c4bb3bc8a8e60ff0ed126`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `40fc447ee77241e8a05dbbf77a261b3a`: the length field at offset 11 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `fc557f92a2b24b57bfa6ed1764d0cb2f`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `cce9743edeea402b9ecae23e4d189eb7`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `979993b4d6b7473f8bfb9e331fd47b44`: the length field at offset 11 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `7a7a0eaa93f64db7b24fee223113a56b`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `67f90d2b3e0d43b583599e1c8a51a61b`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `24b7e8650c054609b063f437f4c33515`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `194aa8405e1d4929bc2f7e52a9cb55f3`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `bd9db31f36c743d5893c371a6314db10`: the length field at offset 14 declares 1850 bytes but the message holds only 5. This framing convention does not hold for the message.\n- message `308cca4de7bc44b0aaf27aa2e3c99714`: the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `f4c3d6700b044c94bfe53f39182cb6ec`: the length field at offset 25 declares 15 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `6860a7f0101744ddba13971deeec2538`: the length field at offset 12 declares 1900 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `0d51cf75cfd1432fa228a2222d026107`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `a64da7ff91bb499793fff10383a2a5b5`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `39659c8f5fbc4e98ac976d8bf4f58827`: the length field at offset 12 declares 2100 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `4c720476c80b4006994e844d6b5a67c2`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `c311b839d6e743cea416642c85488fd0`: the length field at offset 14 declares 23151 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `a235636d672c4386a26cc944d1a0449e`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n- message `10a4f3ba78534ffc8dfa27da65891071`: declared length 0 at offset 2 does not produce a positive message size; framing stopped\n- message `a21b0245215d44fb99155edcabb29186`: the length field at offset 3 declares 256 bytes but the message holds only 8. This framing convention does not hold for the message.\n\n_Evidence: validation_result:82830eeb19db4052984668023091f746, validation_result:f5b8aa222d984295959838a72afad0d2, validation_result:8f48b09410e24992a8814dfe25bbf4e4, validation_result:775bc13009264ab0aaba10f0b03917a1, validation_result:fc5a14f76a9b4ca998833fbec095fd25, validation_result:3528e1a2475f4f2c8c30dd1a7c8c65ec, validation_result:e5b4d085c0034d4ebd4d36fc529fa0cd, validation_result:5435f6baa17b49f58a91f4cbf0a3b7eb, validation_result:710754445d1041a98195825f02645537, validation_result:c270525684d84f4eb4dac05bf0ba4c97, validation_result:4d75a62b24f24eb59f4f1d4456a52c2f, validation_result:4974bd42a17c4fd5a31ba96f7919e550, validation_result:079d91e314d34ba3b62fb7c984aac010, validation_result:5a318623a5784a84b5de74896945bf0b, validation_result:e7405309ddd54d7bb111b278c8b2e863 (+13 more)_\n\n> A counterexample may be a wrong rule or an incomplete capture; both explanations are kept until one is ruled out.\n\n## 10. Unresolved regions\n\n- `Thermostand message layout` leaves flags unexplained\n\n## 11. Capture quality diagnostics\n\n- 1 of 2 sessions were not fully captured\n- 0 stream(s) had no observed connection start\n- source integrity: all files match their recorded hashes\n\n## 12. Limitations\n\n- Conclusions cover only the captures listed above.\n- A reconstructed stream can be incomplete; gaps are shown, never filled.\n- Conflicting bytes at overlapping offsets were resolved by the recorded policy, and both variants remain recorded.\n- Field semantics are analyst hypotheses until a validation run supports them.\n- No claim here has been confirmed against the device documentation.\n\n## 13. Conclusions\n\n- 1 hypothesis/hypotheses are supported by every message in the current corpus.\n- 28 message(s) contradict the current rules and remain unresolved.\n\n## 14. Recommended next experiments\n\n- Import the experiment action log so messages can be tied to the action that produced them.\n- Capture a second recording of the same action sequence and validate the current rules against it.\n- Vary one parameter at a time so its field can be isolated by correlation.\n- Record a session that starts at connection establishment so the stream has no unknown prefix.\n- Investigate the counterexamples above before extending the rules further.\n\n## 15. Reproduction instructions\n\n1. Import the .mplab project archive (or the individual PCAP files listed above).\n2. Re-run capture analysis with the recorded options.\n   Analysis options used: `{\"conflict_policy\": \"first_writer_wins\", \"detect_protocol\": true, \"flow_policy\": \"syn_fin_rst_idle\", \"framing\": {\"config\": {\"endianness\": \"big\", \"header_size\": 8, \"includes_header\": \"false\", \"length_offset\": 2, \"length_size\": 2, \"max_length\": 1048576}, \"method\": \"length_prefix\"}, \"idle_timeout\": 120.0}`\n3. Import the interpretation specification(s) - the checksum is printed in section 7.\n4. Run validation against the same corpus; the verdict must match section 8.\n"
+}

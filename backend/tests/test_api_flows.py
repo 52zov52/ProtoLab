@@ -202,6 +202,35 @@ def test_interpretation_extracts_the_recovered_fields(client, imported):
     assert run["interpretation_name"] == "MadrigalTestDevice"
 
 
+def test_interpretation_routes_expose_the_specification(client, imported):
+    """Every interpretation route must return ``specification``, not raw ORM rows.
+
+    ``InterpretationOut`` expects ``specification`` while the ORM attribute is
+    named ``schema_json``; the list route and the flat alias previously handed
+    back ORM objects and returned a 500.  This pins the mapping.
+    """
+    project_id = imported["project"]["id"]
+    created = client.post(
+        f"/api/projects/{project_id}/interpreters",
+        json={"name": "Round trip", "specification": make_spec()},
+    ).json()
+
+    listed = client.get(f"/api/projects/{project_id}/interpretations")
+    assert listed.status_code == 200, listed.text
+    rows = listed.json()
+    assert [row["id"] for row in rows] == [created["id"]]
+    assert rows[0]["specification"]["schema_version"] == "1.0"
+    assert rows[0]["checksum"] == created["checksum"]
+
+    # The documented flat alias must work too.
+    aliased = client.post(
+        f"/api/interpreters?project_id={project_id}",
+        json={"name": "Alias", "specification": make_spec()},
+    )
+    assert aliased.status_code in (200, 201), aliased.text
+    assert aliased.json()["specification"]["protocol_name"] == "MadrigalTestDevice"
+
+
 def test_wrong_hypothesis_produces_a_counterexample(client, imported, bench_dir):
     """The demonstration's critical step: a plausible but wrong rule fails."""
     project_id = imported["project"]["id"]

@@ -105,10 +105,10 @@ because it cannot inspect the container's port mapping from inside.
 ## Verify the installation
 
 ```bash
-# Backend: 122 tests covering reassembly, framing, interpretation, security
+# Backend: 166 tests covering reassembly, framing, interpretation, security, examples
 .venv/bin/python -m pytest backend -q
 
-# Frontend: 19 tests over hex rendering and formatting, plus lint and types
+# Frontend: 50 tests over hex rendering, tables, graph and formatting, plus lint and types
 cd frontend && npm test && npm run typecheck && npm run lint
 
 # End-to-end demonstration against an in-process client (17 steps)
@@ -148,6 +148,12 @@ path and prints what happened at each step, so the output *is* the evidence.
 11. **Export** the project as a portable archive and re-import it elsewhere to
     confirm the result reproduces.
 
+A completed run of this workflow is checked in under [`examples/`](examples/):
+the portable `.mplab` archive, the accepted machine-readable specification, the
+rejected rule with the counterexamples it produced, the rule applied to a record
+it had never seen, and the final report. `scripts/build_examples.py` regenerates
+them from the real `sample_protocol/` capture.
+
 ---
 
 ## Documentation
@@ -164,6 +170,7 @@ path and prints what happened at each step, so the output *is* the evidence.
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What is not implemented |
 | [docs/TESTING.md](docs/TESTING.md) | How the suite is organised |
 | [docs/DEMO_SCENARIO.md](docs/DEMO_SCENARIO.md) | The 17-step walkthrough |
+| [examples/README.md](examples/README.md) | Worked example: archive, spec, counterexample, report |
 
 ---
 
