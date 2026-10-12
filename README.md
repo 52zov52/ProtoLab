@@ -174,6 +174,7 @@ them from the real `sample_protocol/` capture.
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What is not implemented |
 | [docs/TESTING.md](docs/TESTING.md) | How the suite is organised |
 | [docs/DEMO_SCENARIO.md](docs/DEMO_SCENARIO.md) | The 17-step walkthrough |
+| [docs/TZ_PRODUCTION.md](docs/TZ_PRODUCTION.md) | Production-readiness spec for a handover developer |
 | [examples/README.md](examples/README.md) | Worked example: archive, spec, counterexample, report |
 
 ---
