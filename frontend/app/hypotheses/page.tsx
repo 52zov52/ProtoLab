@@ -16,6 +16,7 @@ import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { cn, formatTimestamp, hypothesisTone, verdictTone } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 const STARTER_SPEC = {
   schema_version: "1.0",
@@ -47,6 +48,7 @@ const STARTER_SPEC = {
 export default function HypothesesPage() {
   const workspace = useWorkspace();
   const params = useSearchParams();
+  const { t } = useI18n();
   const projectId = params.get("project") ?? workspace.projectId;
 
   const [draft, setDraft] = useState(JSON.stringify(STARTER_SPEC, null, 2));
@@ -118,13 +120,13 @@ export default function HypothesesPage() {
     try {
       const parsed = JSON.parse(text);
       if (typeof parsed !== "object" || parsed === null) {
-        setSpecError("The specification must be a JSON object.");
+        setSpecError(t("The specification must be a JSON object."));
         return null;
       }
       setSpecError(null);
       return parsed as Record<string, unknown>;
     } catch (error) {
-      setSpecError(error instanceof Error ? error.message : "Invalid JSON.");
+      setSpecError(error instanceof Error ? error.message : t("Invalid JSON."));
       return null;
     }
   };
@@ -139,7 +141,7 @@ export default function HypothesesPage() {
           name: String(specification.protocol_name ?? "Interpretation"),
           specification,
         }),
-      "Interpretation created.",
+      t("Interpretation created."),
     );
     if (created) {
       setSelectedId(created.id);
@@ -153,7 +155,7 @@ export default function HypothesesPage() {
     if (!specification) return;
     const updated = await action.run(
       () => api.updateInterpretation(projectId, selectedId, { specification }),
-      "Interpretation updated. Previous validation runs are now marked stale.",
+      t("Interpretation updated. Previous validation runs are now marked stale."),
     );
     if (updated) {
       workspace.invalidate();
@@ -165,7 +167,9 @@ export default function HypothesesPage() {
     if (!projectId || !selectedId) return;
     if (corpus.length === 0) {
       validateAction.setError(
-        "Select at least one capture to validate against. A rule tested on no data proves nothing.",
+        t(
+          "Select at least one capture to validate against. A rule tested on no data proves nothing.",
+        ),
       );
       return;
     }
@@ -183,8 +187,8 @@ export default function HypothesesPage() {
     return (
       <div className="p-4">
         <EmptyState
-          title="No project selected"
-          description="Open a project on the Overview page first."
+          title={t("No project selected")}
+          description={t("Open a project on the Overview page first.")}
         />
       </div>
     );
@@ -195,12 +199,14 @@ export default function HypothesesPage() {
       <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-4 py-3">
         <div>
           <h1 className="text-sm font-semibold tracking-tight text-text">
-            Hypotheses &amp; Rules
+            {t("Hypotheses & Rules")}
           </h1>
           <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-            Write an executable interpretation, run it against a corpus and read the
-            counterexamples. A rule that survives every message in this corpus is
-            <em> supported by observed data</em> — not proven universally.
+            {t(
+              "Write an executable interpretation, run it against a corpus and read the counterexamples. A rule that survives every message in this corpus is",
+            )}{" "}
+            <em>{t("supported by observed data")}</em>{" "}
+            {t("— not proven universally.")}
           </p>
         </div>
       </div>
@@ -209,13 +215,13 @@ export default function HypothesesPage() {
         {/* -- left: hypotheses and interpretations -------------------- */}
         <div className="space-y-3">
           <Panel
-            title="Hypotheses"
+            title={t("Hypotheses")}
             actions={
               <button
                 type="button"
                 className="btn"
                 onClick={async () => {
-                  const name = window.prompt("Hypothesis name");
+                  const name = window.prompt(t("Hypothesis name"));
                   if (!name) return;
                   const created = await action.run(() =>
                     api.createHypothesis(projectId, { name, status: "draft" }),
@@ -223,7 +229,7 @@ export default function HypothesesPage() {
                   if (created) workspace.invalidate();
                 }}
               >
-                new
+                {t("new")}
               </button>
             }
           >
@@ -231,8 +237,10 @@ export default function HypothesesPage() {
               <Skeleton rows={5} />
             ) : (hypotheses.data ?? []).length === 0 ? (
               <EmptyState
-                title="No hypotheses yet"
-                description="A hypothesis records what you believe the protocol looks like and why."
+                title={t("No hypotheses yet")}
+                description={t(
+                  "A hypothesis records what you believe the protocol looks like and why.",
+                )}
               />
             ) : (
               <ul>
@@ -256,12 +264,12 @@ export default function HypothesesPage() {
                       <select
                         className="input mt-1.5"
                         value={row.status}
-                        aria-label={`Status of ${row.name}`}
+                        aria-label={t("Status of {name}", { name: row.name })}
                         onChange={async (event) => {
                           const next = event.target.value;
                           await action.run(
                             () => api.updateHypothesis(projectId, row.id, { status: next }),
-                            "Hypothesis updated.",
+                            t("Hypothesis updated."),
                           );
                           workspace.invalidate();
                         }}
@@ -276,7 +284,7 @@ export default function HypothesesPage() {
                           "rejected",
                         ].map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {t(status)}
                           </option>
                         ))}
                       </select>
@@ -287,13 +295,13 @@ export default function HypothesesPage() {
             )}
           </Panel>
 
-          <Panel title="Interpretations">
+          <Panel title={t("Interpretations")}>
             {interpretations.state === "loading" ? (
               <Skeleton rows={4} />
             ) : (interpretations.data ?? []).length === 0 ? (
               <EmptyState
-                title="No rules yet"
-                description="Write a specification on the right and create it."
+                title={t("No rules yet")}
+                description={t("Write a specification on the right and create it.")}
               />
             ) : (
               <ul>
@@ -323,7 +331,7 @@ export default function HypothesesPage() {
 
         {/* -- middle: editor ------------------------------------------- */}
         <Panel
-          title="Interpretation specification (JSON)"
+          title={t("Interpretation specification (JSON)")}
           actions={
             <>
               <button
@@ -331,10 +339,10 @@ export default function HypothesesPage() {
                 className="btn"
                 onClick={() => setDraft(JSON.stringify(STARTER_SPEC, null, 2))}
               >
-                reset
+                {t("reset")}
               </button>
               <button type="button" className="btn btn-primary" onClick={create}>
-                create
+                {t("create")}
               </button>
               <button
                 type="button"
@@ -342,7 +350,7 @@ export default function HypothesesPage() {
                 disabled={!selectedId}
                 onClick={update}
               >
-                save
+                {t("save")}
               </button>
             </>
           }
@@ -356,7 +364,7 @@ export default function HypothesesPage() {
                 setDraft(event.target.value);
                 validateDraft(event.target.value);
               }}
-              aria-label="Interpretation specification"
+              aria-label={t("Interpretation specification")}
             />
             <div className="border-t border-line p-2">
               {specError ? (
@@ -364,7 +372,7 @@ export default function HypothesesPage() {
               ) : (
                 <p className="text-2xs text-status-ok">
                   <Check className="mr-1 inline h-3 w-3" aria-hidden />
-                  Valid JSON. The backend validates the schema again on save.
+                  {t("Valid JSON. The backend validates the schema again on save.")}
                 </p>
               )}
               {action.notice && (
@@ -379,7 +387,7 @@ export default function HypothesesPage() {
 
         {/* -- right: validation and counterexamples -------------------- */}
         <div className="space-y-3">
-          <Panel title="Validate against a corpus">
+          <Panel title={t("Validate against a corpus")}>
             <div className="space-y-2 p-3">
               <CorpusPicker
                 projectId={projectId}
@@ -393,7 +401,7 @@ export default function HypothesesPage() {
                 onClick={validate}
               >
                 <FlaskConical className="h-3 w-3" aria-hidden />
-                {validateAction.pending ? "Validating…" : "Run validation"}
+                {validateAction.pending ? t("Validating…") : t("Run validation")}
               </button>
               {validateAction.error && (
                 <p className="font-mono text-2xs text-status-bad">
@@ -407,35 +415,38 @@ export default function HypothesesPage() {
           </Panel>
 
           {run?.data && (
-            <Panel title="Validation run">
+            <Panel title={t("Validation run")}>
               <dl className="space-y-1 p-3 font-mono text-2xs">
-                <Row label="run" value={run.data.id.slice(0, 16)} />
-                <Row label="rule" value={run.data.interpretation_name ?? "-"} />
-                <Row label="rule version" value={String(run.data.interpretation_version ?? "-")} />
+                <Row label={t("run")} value={run.data.id.slice(0, 16)} />
+                <Row label={t("rule")} value={run.data.interpretation_name ?? "-"} />
+                <Row label={t("rule version")} value={String(run.data.interpretation_version ?? "-")} />
                 <Row
-                  label="checksum"
+                  label={t("checksum")}
                   value={(run.data.specification_checksum ?? "-").slice(0, 16)}
                 />
-                <Row label="status" value={run.data.status} />
-                <Row label="analyzer" value={run.data.analyzer_version} />
+                <Row label={t("status")} value={run.data.status} />
+                <Row label={t("analyzer")} value={run.data.analyzer_version} />
               </dl>
               {run.data.stale && (
                 <div className="px-3 pb-3">
                   <Caveat tone="warn">
-                    {run.data.stale_reason} Re-run the validation before citing these results.
+                    {run.data.stale_reason}{" "}
+                    {t("Re-run the validation before citing these results.")}
                   </Caveat>
                 </div>
               )}
             </Panel>
           )}
 
-          <Panel title="Counterexamples">
+          <Panel title={t("Counterexamples")}>
             {counterexamples.state === "loading" ? (
               <Skeleton rows={6} />
             ) : counterexamples.data && counterexamples.data.count > 0 ? (
               <div className="space-y-2 p-3">
                 <Badge tone="bad">
-                  {counterexamples.data.count} message(s) broke the rule
+                  {t("{count} message(s) broke the rule", {
+                    count: counterexamples.data.count,
+                  })}
                 </Badge>
                 <ul className="space-y-2">
                   {counterexamples.data.counterexamples.map((example) => {
@@ -456,12 +467,15 @@ export default function HypothesesPage() {
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-mono text-2xs text-accent">
-                            msg {row.message_id.slice(0, 12)}
+                            {t("msg {id}", { id: row.message_id.slice(0, 12) })}
                           </span>
-                          <Badge tone="bad">{row.violated_rule ?? "rule"}</Badge>
+                          <Badge tone="bad">{row.violated_rule ?? t("rule")}</Badge>
                         </div>
                         <p className="mt-1 font-mono text-2xs text-text-muted">
-                          offsets {row.start_offset}…{row.end_offset}
+                          {t("offsets {start}…{end}", {
+                            start: row.start_offset,
+                            end: row.end_offset,
+                          })}
                         </p>
                         <ul className="mt-1 space-y-0.5">
                           {row.reasons.map((reason, index) => (
@@ -472,7 +486,9 @@ export default function HypothesesPage() {
                         </ul>
                         <details className="mt-1.5">
                           <summary className="cursor-pointer text-2xs text-text-muted">
-                            alternative explanations ({row.alternative_explanations.length})
+                            {t("alternative explanations ({count})", {
+                              count: row.alternative_explanations.length,
+                            })}
                           </summary>
                           <ul className="mt-1 space-y-0.5">
                             {row.alternative_explanations.map((text, index) => (
@@ -490,27 +506,27 @@ export default function HypothesesPage() {
               </div>
             ) : counterexamples.data ? (
               <EmptyState
-                title="No counterexamples"
-                description="Every message in this corpus satisfied the rule."
+                title={t("No counterexamples")}
+                description={t("Every message in this corpus satisfied the rule.")}
               />
             ) : (
-              <EmptyState title="Run a validation to see counterexamples" />
+              <EmptyState title={t("Run a validation to see counterexamples")} />
             )}
           </Panel>
 
           {support.data && (
-            <Panel title="What the format can express">
+            <Panel title={t("What the format can express")}>
               <div className="space-y-2 p-3 text-2xs">
                 <p className="text-text-muted">
-                  <span className="text-text-faint">framing:</span>{" "}
+                  <span className="text-text-faint">{t("framing:")}</span>{" "}
                   {((support.data.supported_framing ?? []) as string[]).join(", ")}
                 </p>
                 <p className="text-text-muted">
-                  <span className="text-text-faint">field kinds:</span>{" "}
+                  <span className="text-text-faint">{t("field kinds:")}</span>{" "}
                   {((support.data.supported_field_kinds ?? []) as string[]).join(", ")}
                 </p>
                 <div>
-                  <p className="text-text-faint">explicitly unsupported:</p>
+                  <p className="text-text-faint">{t("explicitly unsupported:")}</p>
                   <ul className="mt-1 space-y-0.5">
                     {((support.data.explicitly_unsupported ?? []) as string[]).map(
                       (item, index) => (
@@ -532,6 +548,7 @@ export default function HypothesesPage() {
 }
 
 function VerdictSummary({ result }: { result: Record<string, unknown> }) {
+  const { t } = useI18n();
   const verdict = String(result.verdict ?? "");
   const summary = [
     ["total", result.total],
@@ -543,11 +560,11 @@ function VerdictSummary({ result }: { result: Record<string, unknown> }) {
 
   return (
     <div className="mt-2 rounded-sm border border-line bg-surface-raised p-2.5">
-      <Badge tone={verdictTone(verdict)}>verdict: {verdict}</Badge>
+      <Badge tone={verdictTone(verdict)}>{t("verdict: {verdict}", { verdict })}</Badge>
       <dl className="mt-2 grid grid-cols-5 gap-1 text-center font-mono text-2xs">
         {summary.map(([label, value]) => (
           <div key={label}>
-            <dt className="text-text-faint">{label}</dt>
+            <dt className="text-text-faint">{t(label)}</dt>
             <dd
               className={cn(
                 label === "failed" && Number(value) > 0
@@ -592,16 +609,18 @@ function CorpusPicker({
     return client.projectCaptures(projectId);
   }, [projectId, selected.length]);
 
+  const { t } = useI18n();
+
   return (
     <div>
       <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
-        Corpus (captures to validate against)
+        {t("Corpus (captures to validate against)")}
       </p>
       {captures.state === "loading" ? (
         <Skeleton rows={3} />
       ) : (captures.data ?? []).length === 0 ? (
         <p className="text-2xs text-text-faint">
-          Import captures before validating a rule. A rule tested on no data proves nothing.
+          {t("Import captures before validating a rule. A rule tested on no data proves nothing.")}
         </p>
       ) : (
         <ul className="max-h-40 space-y-0.5 overflow-auto">
@@ -623,9 +642,9 @@ function CorpusPicker({
                   />
                   <span className="truncate text-text">{capture.name}</span>
                   {capture.analysis_status === "completed" ? (
-                    <Badge tone="ok">analysed</Badge>
+                    <Badge tone="ok">{t("analysed")}</Badge>
                   ) : (
-                    <Badge tone="warn">not analysed</Badge>
+                    <Badge tone="warn">{t("not analysed")}</Badge>
                   )}
                 </label>
               </li>
@@ -640,7 +659,7 @@ function CorpusPicker({
           onClick={() => onChange([])}
         >
           <X className="h-3 w-3" aria-hidden />
-          clear corpus
+          {t("clear corpus")}
         </button>
       )}
     </div>

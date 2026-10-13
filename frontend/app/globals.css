@@ -90,7 +90,7 @@ body {
   }
 
   .panel-title {
-    @apply text-2xs uppercase tracking-widest text-text-muted font-semibold;
+    @apply min-w-0 truncate text-2xs uppercase tracking-widest text-text-muted font-semibold;
   }
 
   .btn {

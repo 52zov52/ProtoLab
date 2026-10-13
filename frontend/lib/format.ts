@@ -5,43 +5,100 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 // --------------------------------------------------------------------------
+// Locale
+// --------------------------------------------------------------------------
+
+export type Locale = "en" | "ru";
+
+const INTL_TAG: Record<Locale, string> = { en: "en-US", ru: "ru-RU" };
+
+/**
+ * The active display locale for the pure helpers below.
+ *
+ * Formatting is called from plain functions as well as from components, so the
+ * locale provider mirrors the chosen language here rather than threading a
+ * parameter through every call site. `en` is the default, which keeps unit
+ * tests and any non-React caller deterministic.
+ */
+let activeLocale: Locale = "en";
+
+export function setActiveLocale(locale: Locale): void {
+  activeLocale = locale;
+}
+
+export function getActiveLocale(): Locale {
+  return activeLocale;
+}
+
+/** Use a comma as the decimal separator in Russian, a dot in English. */
+function decimals(locale: Locale, value: string): string {
+  return locale === "ru" ? value.replace(".", ",") : value;
+}
+
+// --------------------------------------------------------------------------
 // Formatting
 // --------------------------------------------------------------------------
 
-export function formatBytes(bytes: number): string {
+const BYTE_UNITS: Record<Locale, string[]> = {
+  en: ["KiB", "MiB", "GiB", "TiB"],
+  ru: ["КиБ", "МиБ", "ГиБ", "ТиБ"],
+};
+
+export function formatBytes(bytes: number, locale: Locale = activeLocale): string {
   if (!Number.isFinite(bytes)) return "-";
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KiB", "MiB", "GiB", "TiB"];
+  if (bytes < 1024) return `${bytes} ${locale === "ru" ? "Б" : "B"}`;
+  const units = BYTE_UNITS[locale];
   let value = bytes / 1024;
   let index = 0;
   while (value >= 1024 && index < units.length - 1) {
     value /= 1024;
     index += 1;
   }
-  return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[index]}`;
+  return `${decimals(locale, value.toFixed(value >= 100 ? 0 : 1))} ${units[index]}`;
 }
 
-export function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US").format(value);
+export function formatNumber(value: number, locale: Locale = activeLocale): string {
+  return new Intl.NumberFormat(INTL_TAG[locale]).format(value);
 }
 
-export function formatTimestamp(epochSeconds: number): string {
+export function formatTimestamp(epochSeconds: number, locale: Locale = activeLocale): string {
   if (!epochSeconds) return "-";
   const date = new Date(epochSeconds * 1000);
+  if (locale === "ru") {
+    return new Intl.DateTimeFormat(INTL_TAG.ru, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(date);
+  }
   return date.toISOString().replace("T", " ").replace(".000Z", "Z");
 }
 
-export function formatDuration(seconds: number): string {
+export function formatDuration(seconds: number, locale: Locale = activeLocale): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "-";
-  if (seconds < 1) return `${(seconds * 1000).toFixed(1)} ms`;
-  if (seconds < 60) return `${seconds.toFixed(3)} s`;
+  const ms = locale === "ru" ? "мс" : "ms";
+  const sec = locale === "ru" ? "с" : "s";
+  if (seconds < 1) return `${decimals(locale, (seconds * 1000).toFixed(1))} ${ms}`;
+  if (seconds < 60) return `${decimals(locale, seconds.toFixed(3))} ${sec}`;
   const minutes = Math.floor(seconds / 60);
-  return `${minutes}m ${(seconds % 60).toFixed(0)}s`;
+  const rest = (seconds % 60).toFixed(0);
+  return locale === "ru" ? `${minutes}м ${rest}с` : `${minutes}m ${rest}s`;
 }
 
-export function formatPercent(value: number, digits = 1): string {
+export function formatPercent(
+  value: number,
+  digitsArg = 1,
+  locale: Locale = activeLocale,
+): string {
   if (!Number.isFinite(value)) return "-";
-  return `${(value * 100).toFixed(digits)}%`;
+  return new Intl.NumberFormat(INTL_TAG[locale], {
+    style: "percent",
+    minimumFractionDigits: digitsArg,
+    maximumFractionDigits: digitsArg,
+  }).format(value);
 }
 
 // --------------------------------------------------------------------------

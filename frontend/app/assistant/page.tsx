@@ -14,6 +14,7 @@ import {
 import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 const SUGGESTIONS = [
   "Find all TCP responses longer than 1000 bytes",
@@ -25,6 +26,7 @@ const SUGGESTIONS = [
 
 export default function AssistantPage() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const params = useSearchParams();
   const projectId = params.get("project") ?? workspace.projectId;
   const [query, setQuery] = useState(params.get("q") ?? "");
@@ -50,26 +52,26 @@ export default function AssistantPage() {
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
         <h1 className="text-sm font-semibold tracking-tight text-text">
-          Investigation Assistant
+          {t("Investigation Assistant")}
         </h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          Your question is compiled into a typed query plan, validated against a field
-          allowlist, and executed through a fixed analytics API. No SQL, shell command or
-          Python is ever generated from text — yours or a model's.
+          {t(
+            "Your question is compiled into a typed query plan, validated against a field allowlist, and executed through a fixed analytics API. No SQL, shell command or Python is ever generated from text — yours or a model's.",
+          )}
         </p>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto p-3 lg:grid-cols-[1fr_360px]">
         <div className="space-y-3">
-          <Panel title="Ask about the traffic">
+          <Panel title={t("Ask about the traffic")}>
             <div className="space-y-2 p-3">
               <textarea
                 className="input h-20 resize-y"
                 maxLength={1000}
-                placeholder={SUGGESTIONS[0]}
+                placeholder={t(SUGGESTIONS[0])}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                aria-label="Search request"
+                aria-label={t("Search request")}
               />
               <div className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-1.5 text-2xs text-text-muted">
@@ -78,7 +80,7 @@ export default function AssistantPage() {
                     checked={dryRun}
                     onChange={(event) => setDryRun(event.target.checked)}
                   />
-                  dry run (show the plan without executing)
+                  {t("dry run (show the plan without executing)")}
                 </label>
                 <label className="flex items-center gap-1.5 text-2xs text-text-muted">
                   <input
@@ -86,7 +88,7 @@ export default function AssistantPage() {
                     checked={useLlm}
                     onChange={(event) => setUseLlm(event.target.checked)}
                   />
-                  allow optional local model narration
+                  {t("allow optional local model narration")}
                 </label>
                 <button
                   type="button"
@@ -104,7 +106,7 @@ export default function AssistantPage() {
                   }
                 >
                   <Search className="h-3 w-3" aria-hidden />
-                  {action.pending ? "Working…" : "Run"}
+                  {action.pending ? t("Working…") : t("Run")}
                 </button>
               </div>
 
@@ -121,15 +123,17 @@ export default function AssistantPage() {
           {result ? <ResultView result={result as Record<string, unknown>} /> : (
             <Panel>
               <EmptyState
-                title="No result yet"
-                description="Start with a dry run: you will see exactly how the request was interpreted before anything is executed."
+                title={t("No result yet")}
+                description={t(
+                  "Start with a dry run: you will see exactly how the request was interpreted before anything is executed.",
+                )}
               />
             </Panel>
           )}
         </div>
 
         <div className="space-y-3">
-          <Panel title="Corpus">
+          <Panel title={t("Corpus")}>
             {captures.state === "loading" ? (
               <Skeleton rows={4} />
             ) : (
@@ -154,14 +158,14 @@ export default function AssistantPage() {
                 ))}
                 {(captures.data ?? []).length === 0 && (
                   <li className="text-2xs text-text-faint">
-                    No captures imported; the search will cover the whole index.
+                    {t("No captures imported; the search will cover the whole index.")}
                   </li>
                 )}
               </ul>
             )}
           </Panel>
 
-          <Panel title="What this can and cannot do">
+          <Panel title={t("What this can and cannot do")}>
             {capabilities.state === "loading" ? (
               <Skeleton rows={6} />
             ) : capabilities.data ? (
@@ -170,13 +174,13 @@ export default function AssistantPage() {
                   {String(capabilities.data.execution_model)}
                 </p>
                 <div>
-                  <p className="text-text-faint">queryable entities:</p>
+                  <p className="text-text-faint">{t("queryable entities:")}</p>
                   <p className="font-mono text-text">
                     {((capabilities.data.entities ?? []) as string[]).join(", ")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-text-faint">external AI:</p>
+                  <p className="text-text-faint">{t("external AI:")}</p>
                   <Badge
                     tone={
                       (capabilities.data.external_ai as { enabled?: boolean })?.enabled
@@ -198,7 +202,7 @@ export default function AssistantPage() {
             ) : null}
           </Panel>
 
-          <Panel title="Try one of these">
+          <Panel title={t("Try one of these")}>
             <ul className="space-y-1 p-3">
               {SUGGESTIONS.map((suggestion) => (
                 <li key={suggestion}>
@@ -207,7 +211,7 @@ export default function AssistantPage() {
                     className="link text-left text-2xs"
                     onClick={() => setQuery(suggestion)}
                   >
-                    {suggestion}
+                    {t(suggestion)}
                   </button>
                 </li>
               ))}
@@ -220,13 +224,14 @@ export default function AssistantPage() {
 }
 
 function ResultView({ result }: { result: Record<string, unknown> }) {
+  const { t } = useI18n();
   const status = String(result.status ?? "");
 
   if (status === "needs_clarification") {
     return (
-      <Panel title="The assistant refused to guess">
+      <Panel title={t("The assistant refused to guess")}>
         <div className="space-y-2 p-3">
-          <Badge tone="warn">needs clarification</Badge>
+          <Badge tone="warn">{t("needs clarification")}</Badge>
           <p className="text-2xs text-text">{String(result.question ?? "")}</p>
           <Caveat tone="warn">{String(result.note ?? "")}</Caveat>
           <ul className="space-y-1">
@@ -245,11 +250,11 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
   const queryResult = result.result as Record<string, unknown> | undefined;
 
   return (
-    <Panel title="Result">
+    <Panel title={t("Result")}>
       <div className="space-y-2 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={result.executed ? "ok" : "info"}>
-            {result.executed ? "executed" : "planned (dry run)"}
+            {result.executed ? t("executed") : t("planned (dry run)")}
           </Badge>
           <span className="text-2xs text-text-muted">{String(result.interpretation ?? "")}</span>
         </div>
@@ -257,7 +262,7 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
         {plan && (
           <div>
             <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
-              Compiled query plan
+              {t("Compiled query plan")}
             </p>
             <pre className="overflow-x-auto rounded-sm border border-line bg-surface-sunken p-2 font-mono text-2xs">
               {JSON.stringify(plan, null, 2)}
@@ -278,18 +283,20 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
         {queryResult && (
           <div>
             <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
-              {String(queryResult.count ?? 0)} matching{" "}
-              {String(queryResult.entity ?? "records")}
+              {t("{count} matching {entity}", {
+                count: String(queryResult.count ?? 0),
+                entity: String(queryResult.entity ?? t("records")),
+              })}
             </p>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>id</th>
-                  <th>stream</th>
-                  <th>direction</th>
-                  <th>range</th>
-                  <th>length</th>
-                  <th>entropy</th>
+                  <th>{t("id")}</th>
+                  <th>{t("stream")}</th>
+                  <th>{t("direction")}</th>
+                  <th>{t("range")}</th>
+                  <th>{t("length")}</th>
+                  <th>{t("entropy")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -322,14 +329,14 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
 
         {typeof result.llm === "object" && result.llm !== null && (
           <div className="rounded-sm border border-status-warn/30 bg-status-warn/5 p-2.5">
-            <Badge tone="warn">model narration</Badge>
+            <Badge tone="warn">{t("model narration")}</Badge>
             <p className="mt-1 whitespace-pre-wrap text-2xs text-text">
               {String((result.llm as { text?: string }).text ?? "")}
             </p>
             <Caveat tone="warn">
               {String(
                 (result.llm as { disclaimer?: string }).disclaimer ??
-                  "Model-generated narration, not evidence.",
+                  t("Model-generated narration, not evidence."),
               )}
             </Caveat>
           </div>

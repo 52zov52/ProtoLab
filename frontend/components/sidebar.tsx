@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { useWorkspace } from "@/hooks/use-workspace";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/format";
 
 export interface NavEntry {
@@ -52,6 +53,7 @@ export const NAV: NavEntry[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { projectId, projectName } = useWorkspace();
+  const { t } = useI18n();
 
   return (
     <nav
@@ -71,15 +73,15 @@ export function Sidebar() {
       </div>
 
       <div className="border-b border-line px-3 py-2">
-        <p className="text-2xs uppercase tracking-wider text-text-faint">Project</p>
+        <p className="text-2xs uppercase tracking-wider text-text-faint">{t("Project")}</p>
         <p
           className={cn(
             "mt-0.5 truncate font-mono text-2xs",
             projectName ? "text-accent" : "text-text-faint",
           )}
-          title={projectName ?? "No project selected"}
+          title={projectName ?? t("No project selected")}
         >
-          {projectName ?? "none selected"}
+          {projectName ?? t("none selected")}
         </p>
       </div>
 
@@ -95,11 +97,11 @@ export function Sidebar() {
               key={entry.href}
               href={projectId ? `${entry.href}?project=${projectId}` : entry.href}
               className={cn("nav-item", active && "nav-item-active")}
-              title={entry.description}
+              title={t(entry.description)}
               aria-current={active ? "page" : undefined}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{entry.label}</span>
+              <span className="truncate">{t(entry.label)}</span>
             </Link>
           );
         })}
@@ -107,7 +109,7 @@ export function Sidebar() {
 
       <div className="border-t border-line px-3 py-2">
         <p className="text-2xs leading-relaxed text-text-faint">
-          Local secure mode. Every conclusion links to the bytes it came from.
+          {t("Local secure mode. Every conclusion links to the bytes it came from.")}
         </p>
       </div>
     </nav>

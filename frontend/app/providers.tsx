@@ -4,6 +4,8 @@ import { Suspense } from "react";
 
 import { Sidebar } from "@/components/sidebar";
 import { TopBar } from "@/components/topbar";
+import { LocaleProvider } from "@/lib/i18n";
+import { ProtocolFilterProvider } from "@/hooks/use-protocol-filter";
 import { WorkspaceProvider } from "@/hooks/use-workspace";
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -20,10 +22,14 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <WorkspaceProvider>
-      <Suspense fallback={<div className="p-4 text-2xs text-text-faint">Loading…</div>}>
-        <Shell>{children}</Shell>
-      </Suspense>
-    </WorkspaceProvider>
+    <LocaleProvider>
+      <WorkspaceProvider>
+        <ProtocolFilterProvider>
+          <Suspense fallback={<div className="p-4 text-2xs text-text-faint">Loading…</div>}>
+            <Shell>{children}</Shell>
+          </Suspense>
+        </ProtocolFilterProvider>
+      </WorkspaceProvider>
+    </LocaleProvider>
   );
 }

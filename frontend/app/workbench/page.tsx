@@ -18,6 +18,7 @@ import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { columnClassLegend, columnClassMeta } from "@/lib/column-classes";
 import { cn } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 type MessageRow = {
   id: string;
@@ -35,6 +36,7 @@ type MessageRow = {
 export default function WorkbenchPage() {
   const workspace = useWorkspace();
   const params = useSearchParams();
+  const { t } = useI18n();
   const sessionId = params.get("session") ?? workspace.sessionId;
   const captureId = workspace.captureId;
 
@@ -82,11 +84,13 @@ export default function WorkbenchPage() {
     return (
       <div className="p-4">
         <EmptyState
-          title="No capture selected"
-          description="The Protocol Workbench compares framed messages from a reconstructed stream. Select an analysed capture and a session, then apply a framing rule to the stream."
+          title={t("No capture selected")}
+          description={t(
+            "The Protocol Workbench compares framed messages from a reconstructed stream. Select an analysed capture and a session, then apply a framing rule to the stream.",
+          )}
           action={
             <Link href="/captures" className="btn btn-primary">
-              Go to Captures
+              {t("Go to Captures")}
             </Link>
           }
         />
@@ -124,10 +128,11 @@ export default function WorkbenchPage() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-4 py-3">
         <div>
-          <h1 className="text-sm font-semibold tracking-tight text-text">Protocol Workbench</h1>
+          <h1 className="text-sm font-semibold tracking-tight text-text">{t("Protocol Workbench")}</h1>
           <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-            Compare binary messages side by side, read the per-offset statistics and see
-            which field candidates the data actually supports.
+            {t(
+              "Compare binary messages side by side, read the per-offset statistics and see which field candidates the data actually supports.",
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1">
@@ -145,18 +150,18 @@ export default function WorkbenchPage() {
             </button>
           ))}
           <span className="text-2xs text-text-faint">
-            one stream per direction
+            {t("one stream per direction")}
           </span>
         </div>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto p-3 xl:grid-cols-2">
         <Panel
-          title="Messages (select 2–6 to compare)"
+          title={t("Messages (select 2–6 to compare)")}
           actions={
             selected.length > 0 ? (
               <button type="button" className="btn" onClick={() => setSelected([])}>
-                clear
+                {t("clear")}
               </button>
             ) : null
           }
@@ -167,8 +172,8 @@ export default function WorkbenchPage() {
             <ErrorState message={messages.error ?? ""} onRetry={messages.reload} />
           ) : filtered.length === 0 ? (
             <EmptyState
-              title="No framed messages"
-              description="Choose a framing rule on the Stream Explorer first."
+              title={t("No framed messages")}
+              description={t("Choose a framing rule on the Stream Explorer first.")}
             />
           ) : (
             <table className="data-table">
@@ -176,11 +181,11 @@ export default function WorkbenchPage() {
                 <tr>
                   <th />
                   <th>#</th>
-                  <th>Range</th>
-                  <th>Len</th>
-                  <th>Entropy</th>
-                  <th>Unique</th>
-                  <th>State</th>
+                  <th>{t("Range")}</th>
+                  <th>{t("Len")}</th>
+                  <th>{t("Entropy")}</th>
+                  <th>{t("Unique")}</th>
+                  <th>{t("State")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,7 +209,7 @@ export default function WorkbenchPage() {
                       <td>{message.features.unique_bytes ?? "-"}</td>
                       <td>
                         <Badge tone={message.complete ? "ok" : "warn"}>
-                          {message.complete ? "complete" : "partial"}
+                          {message.complete ? t("complete") : t("partial")}
                         </Badge>
                       </td>
                     </tr>
@@ -215,11 +220,13 @@ export default function WorkbenchPage() {
           )}
         </Panel>
 
-        <Panel title="Per-offset alignment">
+        <Panel title={t("Per-offset alignment")}>
           {selected.length < 2 ? (
             <EmptyState
-              title="Select at least two messages"
-              description="Alignment is positional: a byte at offset N in one message is compared with offset N in another. Where a message is shorter, the position is shown as absent, never as zero."
+              title={t("Select at least two messages")}
+              description={t(
+                "Alignment is positional: a byte at offset N in one message is compared with offset N in another. Where a message is shorter, the position is shown as absent, never as zero.",
+              )}
             />
           ) : comparison.state === "loading" ? (
             <Skeleton rows={12} />
@@ -236,17 +243,17 @@ export default function WorkbenchPage() {
               />
             </div>
           ) : (
-            <EmptyState title="No comparison" />
+            <EmptyState title={t("No comparison")} />
           )}
         </Panel>
 
-        <Panel title="Field candidates inferred from the bytes">
+        <Panel title={t("Field candidates inferred from the bytes")}>
           {stats.state === "loading" ? (
             <Skeleton rows={8} />
           ) : candidates.length === 0 ? (
             <EmptyState
-              title="No candidates"
-              description="Insufficient messages or no structure detected yet."
+              title={t("No candidates")}
+              description={t("Insufficient messages or no structure detected yet.")}
             />
           ) : (
             <div className="space-y-2 p-3">
@@ -269,37 +276,41 @@ export default function WorkbenchPage() {
                     {candidate.rationale}
                   </p>
                   <p className="mt-1 font-mono text-2xs text-text-faint">
-                    supports {candidate.support_count} · contradicts{" "}
-                    {candidate.contradiction_count}
+                    {t("supports {supports} · contradicts {contradicts}", {
+                      supports: candidate.support_count,
+                      contradicts: candidate.contradiction_count,
+                    })}
                   </p>
                 </div>
               ))}
               <Caveat tone="warn">
-                These are hypotheses generated from observed bytes. A candidate name is
-                a label, not a claim: nothing here proves what a field <em>means</em>.
+                {t(
+                  "These are hypotheses generated from observed bytes. A candidate name is a label, not a claim: nothing here proves what a field",
+                )}{" "}
+                <em>{t("means")}</em>.
               </Caveat>
             </div>
           )}
         </Panel>
 
-        <Panel title="Column statistics">
+        <Panel title={t("Column statistics")}>
           {columnStats.length === 0 ? (
-            <EmptyState title="No statistics" />
+            <EmptyState title={t("No statistics")} />
           ) : (
             <div className="overflow-x-auto">
               <div className="flex flex-col gap-2 border-b border-line p-3">
                 <div className="flex flex-wrap items-center gap-3 text-2xs text-text-faint">
                   {columnClassLegend().map((meta) => (
-                    <span key={meta.label} className="flex items-center gap-1" title={meta.description}>
+                    <span key={meta.label} className="flex items-center gap-1" title={t(meta.description)}>
                       <span
                         className="inline-block h-3 w-3 rounded-sm"
                         style={{ background: meta.color }}
                       />
-                      {meta.label}
+                      {t(meta.label)}
                     </span>
                   ))}
                 </div>
-                <div className="flex items-end gap-px" aria-label="Byte class per offset">
+                <div className="flex items-end gap-px" aria-label={t("Byte class per offset")}>
                   {columnStats.slice(0, 64).map((column) => {
                     const meta = columnClassMeta(column.classification);
                     return (
@@ -307,7 +318,10 @@ export default function WorkbenchPage() {
                         key={column.offset}
                         className="w-3 rounded-sm"
                         style={{ background: meta.color, height: 18 }}
-                        title={`offset ${column.offset}: ${meta.label}`}
+                        title={t("offset {offset}: {label}", {
+                          offset: column.offset,
+                          label: t(meta.label),
+                        })}
                       />
                     );
                   })}
@@ -316,14 +330,14 @@ export default function WorkbenchPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Offset</th>
-                    <th>Class</th>
-                    <th>Present</th>
-                    <th>Absent</th>
-                    <th>Unique</th>
-                    <th>Entropy</th>
-                    <th>Change rate</th>
-                    <th>Most common</th>
+                    <th>{t("Offset")}</th>
+                    <th>{t("Class")}</th>
+                    <th>{t("Present")}</th>
+                    <th>{t("Absent")}</th>
+                    <th>{t("Unique")}</th>
+                    <th>{t("Entropy")}</th>
+                    <th>{t("Change rate")}</th>
+                    <th>{t("Most common")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,7 +355,7 @@ export default function WorkbenchPage() {
                               className="inline-block h-3 w-3 rounded-sm"
                               style={{ background: meta.color }}
                             />
-                            <Badge tone={meta.tone}>{meta.label}</Badge>
+                            <Badge tone={meta.tone}>{t(meta.label)}</Badge>
                           </span>
                         </td>
                         <td>{column.present_count}</td>
@@ -364,9 +378,9 @@ export default function WorkbenchPage() {
               </table>
               <div className="p-3">
                 <Caveat>
-                  A position that is absent from some messages is counted as absent.
-                  Missing bytes are never filled with zero, and a field that only
-                  exists in some messages is reported as such.
+                  {t(
+                    "A position that is absent from some messages is counted as absent. Missing bytes are never filled with zero, and a field that only exists in some messages is reported as such.",
+                  )}
                 </Caveat>
               </div>
             </div>

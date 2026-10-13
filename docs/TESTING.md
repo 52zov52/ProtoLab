@@ -4,7 +4,7 @@
 # Backend - 172 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
-# Frontend - 57 tests
+# Frontend - 61 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -53,6 +53,7 @@ python scripts/live_check.py
 | `frontend/tests/tcp-state-diagram.test.tsx` | TCP state-diagram layout (§8.1) |
 | `frontend/tests/captures-page.test.tsx` | Captures empty/error states and import failure (§23) |
 | `frontend/tests/hypotheses-page.test.tsx` | Rule editor validation and the rule → corpus → counterexamples loop (§23) |
+| `frontend/tests/i18n.test.tsx` | RU/EN selection, persistence, `<html lang>`, and translation coverage (Этап 8) |
 
 ## The test bench
 
@@ -156,6 +157,9 @@ get wrong:
 - the rule editor does not claim a broken draft is valid JSON, invalid JSON never
   reaches the server, a server rejection is reported, and the rule → corpus →
   counterexamples loop renders the counterexample it produced
+- switching the language changes the UI, `<html lang>` and the stored preference;
+  a stored preference is applied on load; and every `t("…")` literal in `app/`
+  and `components/` has a Russian entry, so nothing is silently left in English
 
 ## The demo scenario as a test
 

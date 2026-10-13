@@ -2,15 +2,17 @@
 
 import { useRef, useState } from "react";
 
-import { Badge, EmptyState, Panel } from "@/components/ui";
+import { Badge, ConfirmButton, EmptyState, Panel } from "@/components/ui";
 import { useAsync, useAction } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { cn, formatBytes, formatTimestamp } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 /** Project selector + creation form. Persisted in the workspace context. */
 export function ProjectPicker() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const projects = useAsync(() => api.listProjects(), [workspace.revision]);
   const action = useAction();
   const [name, setName] = useState("");
@@ -20,7 +22,7 @@ export function ProjectPicker() {
     if (!name.trim()) return;
     const created = await action.run(
       () => api.createProject(name.trim(), description.trim()),
-      `Project "${name.trim()}" created.`,
+      t('Project "{name}" created.', { name: name.trim() }),
     );
     if (created) {
       workspace.selectProject(created.id, created.name);
@@ -39,15 +41,31 @@ export function ProjectPicker() {
     }
   };
 
+  const remove = useAction();
+  const deleteProject = async (id: string, displayName: string) => {
+    const ok = await remove.run(
+      async () => {
+        await api.deleteProject(id);
+        return true;
+      },
+      t('Project "{name}" deleted.', { name: displayName }),
+    );
+    // `run` resolves to null only when the request failed.
+    if (!ok) return;
+    if (workspace.projectId === id) workspace.clearProject();
+    workspace.invalidate();
+    projects.reload();
+  };
+
   return (
     <Panel
-      title="Investigation project"
+      title={t("Investigation project")}
       actions={
         projects.state === "loading" ? (
-          <span className="text-2xs text-text-faint">loading…</span>
+          <span className="text-2xs text-text-faint">{t("loading…")}</span>
         ) : (
           <button type="button" className="btn" onClick={projects.reload}>
-            Refresh
+            {t("Refresh")}
           </button>
         )
       }
@@ -61,8 +79,10 @@ export function ProjectPicker() {
 
         {projects.data && projects.data.length === 0 && (
           <EmptyState
-            title="No projects yet"
-            description="Create an investigation project, then import a PCAP capture to begin."
+            title={t("No projects yet")}
+            description={t(
+              "Create an investigation project, then import a PCAP capture to begin.",
+            )}
           />
         )}
 
@@ -70,17 +90,20 @@ export function ProjectPicker() {
           {(projects.data ?? []).map((project) => {
             const active = project.id === workspace.projectId;
             return (
-              <li key={project.id}>
+              <li
+                key={project.id}
+                className={cn(
+                  "flex items-stretch gap-1 rounded-sm border transition-colors",
+                  active
+                    ? "border-accent-dim bg-accent-faint"
+                    : "border-line bg-surface-raised hover:border-line-strong",
+                )}
+              >
                 <button
                   type="button"
                   onClick={() => adopt(project.id)}
                   aria-current={active ? "true" : undefined}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-3 rounded-sm border px-2.5 py-2 text-left transition-colors",
-                    active
-                      ? "border-accent-dim bg-accent-faint"
-                      : "border-line bg-surface-raised hover:border-line-strong",
-                  )}
+                  className="flex min-w-0 flex-1 items-center justify-between gap-3 px-2.5 py-2 text-left"
                 >
                   <span className="min-w-0">
                     <span
@@ -92,12 +115,23 @@ export function ProjectPicker() {
                       {project.name}
                     </span>
                     <span className="mt-0.5 block font-mono text-2xs text-text-faint">
-                      {project.capture_count} capture(s) · {project.message_count} message(s) ·{" "}
-                      {project.hypothesis_count} hypothesis/hypotheses
+                      {t("{captures} capture(s) · {messages} message(s) · {hypotheses} hypothesis/hypotheses", {
+                        captures: project.capture_count,
+                        messages: project.message_count,
+                        hypotheses: project.hypothesis_count,
+                      })}
                     </span>
                   </span>
-                  {active && <Badge tone="info">current</Badge>}
+                  {active && <Badge tone="info">{t("current")}</Badge>}
                 </button>
+                <div className="flex shrink-0 items-center pr-1.5">
+                  <ConfirmButton
+                    label={t("Delete")}
+                    confirmLabel={t("Delete project?")}
+                    onConfirm={() => deleteProject(project.id, project.name)}
+                    disabled={remove.pending}
+                  />
+                </div>
               </li>
             );
           })}
@@ -105,18 +139,18 @@ export function ProjectPicker() {
 
         <div className="mt-4 border-t border-line pt-3">
           <p className="mb-2 text-2xs uppercase tracking-wider text-text-faint">
-            New project
+            {t("New project")}
           </p>
           <input
             className="input"
-            placeholder="Project name"
+            placeholder={t("Project name")}
             value={name}
             maxLength={200}
             onChange={(event) => setName(event.target.value)}
           />
           <textarea
             className="input mt-1.5 h-16 resize-y"
-            placeholder="What is the investigation trying to establish?"
+            placeholder={t("What is the investigation trying to establish?")}
             value={description}
             maxLength={20000}
             onChange={(event) => setDescription(event.target.value)}
@@ -127,12 +161,22 @@ export function ProjectPicker() {
             disabled={!name.trim() || action.pending}
             onClick={create}
           >
-            {action.pending ? "Creating…" : "Create project"}
+            {action.pending ? t("Creating…") : t("Create project")}
           </button>
           {action.notice && (
             <p className="mt-2 text-2xs text-status-ok">{action.notice}</p>
           )}
           {action.error && <p className="mt-2 text-2xs text-status-bad">{action.error}</p>}
+          {remove.notice && (
+            <p className="mt-2 text-2xs text-status-ok" role="status">
+              {remove.notice}
+            </p>
+          )}
+          {remove.error && (
+            <p className="mt-2 text-2xs text-status-bad" role="alert">
+              {remove.error}
+            </p>
+          )}
         </div>
       </div>
     </Panel>
@@ -142,6 +186,7 @@ export function ProjectPicker() {
 /** Capture selector, scoped to the current project. */
 export function CapturePicker({ onSelect }: { onSelect?: (id: string) => void }) {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -173,7 +218,9 @@ export function CapturePicker({ onSelect }: { onSelect?: (id: string) => void })
       window.alert(
         error instanceof Error
           ? error.message
-          : "The capture could not be imported. See the Security Center for the active limits.",
+          : t(
+              "The capture could not be imported. See the Security Center for the active limits.",
+            ),
       );
     } finally {
       setBusy(false);
@@ -181,12 +228,14 @@ export function CapturePicker({ onSelect }: { onSelect?: (id: string) => void })
   };
 
   return (
-    <Panel title="Selected capture">
+    <Panel title={t("Selected capture")}>
       <div className="space-y-2 p-3">
         {!workspace.captureId && (
           <EmptyState
-            title="No capture selected"
-            description="Import a PCAP or PCAPNG file to start. The original bytes are stored immutably and hashed."
+            title={t("No capture selected")}
+            description={t(
+              "Import a PCAP or PCAPNG file to start. The original bytes are stored immutably and hashed.",
+            )}
             action={
               <button
                 type="button"
@@ -194,7 +243,7 @@ export function CapturePicker({ onSelect }: { onSelect?: (id: string) => void })
                 disabled={!workspace.projectId || busy}
                 onClick={() => fileInput.current?.click()}
               >
-                {busy ? "Importing…" : "Import PCAP"}
+                {busy ? t("Importing…") : t("Import PCAP")}
               </button>
             }
           />
@@ -214,18 +263,21 @@ export function CapturePicker({ onSelect }: { onSelect?: (id: string) => void })
 
         {workspace.captureId && capture.data && (
           <div className="space-y-1.5 font-mono text-2xs">
-            <Row label="name" value={capture.data.name} />
-            <Row label="format" value={capture.data.format} />
-            <Row label="size" value={formatBytes(capture.data.file_size)} />
-            <Row label="sha256" value={`${capture.data.sha256.slice(0, 32)}…`} />
-            <Row label="imported" value={formatTimestamp(Date.parse(capture.data.imported_at) / 1000)} />
-            <Row label="analysis" value={capture.data.analysis_status} />
+            <Row label={t("name")} value={capture.data.name} />
+            <Row label={t("format")} value={capture.data.format} />
+            <Row label={t("size")} value={formatBytes(capture.data.file_size)} />
+            <Row label={t("sha256")} value={`${capture.data.sha256.slice(0, 32)}…`} />
+            <Row
+              label={t("imported")}
+              value={formatTimestamp(Date.parse(capture.data.imported_at) / 1000)}
+            />
+            <Row label={t("analysis")} value={capture.data.analysis_status} />
           </div>
         )}
 
         {sessions.data && (
           <p className="border-t border-line pt-2 text-2xs text-text-muted">
-            {sessions.data.total} TCP session(s) in this capture.
+            {t("{count} TCP session(s) in this capture.", { count: sessions.data.total })}
           </p>
         )}
 
@@ -236,7 +288,7 @@ export function CapturePicker({ onSelect }: { onSelect?: (id: string) => void })
             disabled={!workspace.projectId || busy}
             onClick={() => fileInput.current?.click()}
           >
-            Import another capture
+            {t("Import another capture")}
           </button>
         )}
       </div>

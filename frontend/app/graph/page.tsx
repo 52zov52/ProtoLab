@@ -12,10 +12,12 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { useAsync } from "@/hooks/use-async";
+import { useProtocolFilter } from "@/hooks/use-protocol-filter";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { edgeColor, protocolMeta } from "@/lib/graph-colors";
 import { cn, formatNumber } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 type Node = {
   id: string;
@@ -44,6 +46,8 @@ type Edge = {
 export default function GraphPage() {
   const workspace = useWorkspace();
   const params = useSearchParams();
+  const { t } = useI18n();
+  const protocolFilter = useProtocolFilter();
   const projectId = params.get("project") ?? workspace.projectId;
   const [selected, setSelected] = useState<string | null>(null);
   const [minBytes, setMinBytes] = useState(0);
@@ -98,6 +102,15 @@ export default function GraphPage() {
     [allEdges, visibleIds],
   );
 
+  // The protocol filter is a second, independent view filter. An interaction is
+  // hidden only when *every* protocol label it carries is hidden, so hiding a
+  // noisy label never masks an interaction that also carried a label the
+  // analyst still wants to see.
+  const edgesShown = useMemo(
+    () => edges.filter((e) => !e.protocols.every((p) => protocolFilter.isHidden(p))),
+    [edges, protocolFilter],
+  );
+
   const layout = useMemo(() => {
     // A deterministic circular layout: reproducible across renders, which a
     // force simulation would not be.
@@ -146,6 +159,11 @@ export default function GraphPage() {
     return [...names].sort();
   }, [edges]);
 
+  const hiddenCount = useMemo(
+    () => legendProtocols.filter((protocol) => protocolFilter.isHidden(protocol)).length,
+    [legendProtocols, protocolFilter],
+  );
+
   const hubNodes = useMemo(
     () => nodes.filter((node) => node.hub_candidate),
     [nodes],
@@ -153,13 +171,13 @@ export default function GraphPage() {
 
   const selectedNode = nodes.find((n) => n.id === selected) ?? null;
   const connectedEdges = selected
-    ? edges.filter((e) => e.source === selected || e.target === selected)
+    ? edgesShown.filter((e) => e.source === selected || e.target === selected)
     : [];
 
   if (!projectId) {
     return (
       <div className="p-4">
-        <EmptyState title="No project selected" />
+        <EmptyState title={t("No project selected")} />
       </div>
     );
   }
@@ -167,16 +185,17 @@ export default function GraphPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h1 className="text-sm font-semibold tracking-tight text-text">Network Graph</h1>
+        <h1 className="text-sm font-semibold tracking-tight text-text">{t("Network Graph")}</h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          Edges exist only where traffic was actually observed. Node size reflects
-          observed volume; centrality is a triage aid, not an accusation.
+          {t(
+            "Edges exist only where traffic was actually observed. Node size reflects observed volume; centrality is a triage aid, not an accusation.",
+          )}
         </p>
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line px-4 py-2">
         <label className="flex items-center gap-2 text-2xs text-text-muted">
-          <span className="uppercase tracking-wider">Min traffic</span>
+          <span className="uppercase tracking-wider">{t("Min traffic")}</span>
           <input
             type="number"
             min={0}
@@ -185,55 +204,75 @@ export default function GraphPage() {
             onChange={(event) => setMinBytes(Math.max(0, Number(event.target.value) || 0))}
             className="input w-28"
           />
-          <span>bytes</span>
+          <span>{t("bytes")}</span>
         </label>
         <span className="text-2xs text-text-faint">
-          {nodes.length} of {allNodes.length} endpoints shown · {edges.length} of{" "}
-          {allEdges.length} interactions
+          {t("{shown} of {total} endpoints shown · {shownEdges} of {totalEdges} interactions", {
+            shown: formatNumber(nodes.length),
+            total: formatNumber(allNodes.length),
+            shownEdges: formatNumber(edgesShown.length),
+            totalEdges: formatNumber(allEdges.length),
+          })}
         </span>
         {minBytes > 0 && (
           <button type="button" className="btn" onClick={() => setMinBytes(0)}>
-            Clear filter
+            {t("Clear filter")}
+          </button>
+        )}
+        {hiddenCount > 0 && (
+          <button type="button" className="btn" onClick={protocolFilter.showAll}>
+            {t("Show {count} hidden protocol(s)", { count: hiddenCount })}
           </button>
         )}
         <Caveat>
-          Filtering hides endpoints below the threshold, and any interaction with
-          them. It does not change the underlying analysis.
+          {t(
+            "Filtering hides endpoints below the threshold, and any interaction with them. It does not change the underlying analysis.",
+          )}
         </Caveat>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto p-3 lg:grid-cols-[1fr_340px]">
         <div className="space-y-3">
-          <Panel title="Interaction graph">
+          <Panel title={t("Interaction graph")}>
             {captures.state === "loading" ? (
               <Skeleton rows={8} />
             ) : graph.state === "error" ? (
               <ErrorState message={graph.error ?? ""} onRetry={graph.reload} />
             ) : graph.data ? (
               <div className="p-3">
-                <div className="flex items-center justify-between gap-2 pb-2">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-start justify-between gap-2 pb-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {legendProtocols.map((protocol) => {
                       const meta = protocolMeta(protocol);
+                      const hidden = protocolFilter.isHidden(protocol);
                       return (
-                        <span
+                        <button
                           key={protocol}
-                          className="flex items-center gap-1 text-2xs text-text-faint"
+                          type="button"
+                          onClick={() => protocolFilter.toggle(protocol)}
+                          aria-pressed={!hidden}
+                          title={hidden ? t("Show this protocol") : t("Hide this protocol")}
+                          className={cn(
+                            "flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-2xs transition-colors",
+                            hidden
+                              ? "border-line text-text-faint line-through opacity-60"
+                              : "border-line-strong text-text-muted hover:border-accent-dim hover:text-text",
+                          )}
                         >
                           <span
                             className="inline-block h-1.5 w-4 rounded-full"
-                            style={{ background: meta.color }}
+                            style={{ background: meta.color, opacity: hidden ? 0.4 : 1 }}
                           />
-                          {meta.label}
-                        </span>
+                          {t(meta.label)}
+                        </button>
                       );
                     })}
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       className="btn"
-                      title="Zoom out"
+                      title={t("Zoom out")}
                       onClick={() =>
                         setView((v) => ({ ...v, k: Math.max(0.4, v.k / 1.2) }))
                       }
@@ -243,7 +282,7 @@ export default function GraphPage() {
                     <button
                       type="button"
                       className="btn"
-                      title="Zoom in"
+                      title={t("Zoom in")}
                       onClick={() =>
                         setView((v) => ({ ...v, k: Math.min(4, v.k * 1.2) }))
                       }
@@ -255,7 +294,7 @@ export default function GraphPage() {
                       className="btn"
                       onClick={() => setView({ x: 0, y: 0, k: 1 })}
                     >
-                      reset
+                      {t("reset")}
                     </button>
                   </div>
                 </div>
@@ -267,7 +306,10 @@ export default function GraphPage() {
                     drag ? "cursor-grabbing" : "cursor-grab",
                   )}
                   role="img"
-                  aria-label={`Network graph with ${nodes.length} nodes and ${edges.length} edges`}
+                  aria-label={t("Network graph with {nodes} nodes and {edges} edges", {
+                    nodes: nodes.length,
+                    edges: edgesShown.length,
+                  })}
                   onMouseDown={(event) => {
                     const rect = svgRef.current?.getBoundingClientRect();
                     if (!rect) return;
@@ -293,7 +335,7 @@ export default function GraphPage() {
                 >
                   <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
                     <g>
-                      {edges.map((edge, index) => {
+                      {edgesShown.map((edge, index) => {
                         const a = layout.positions.get(edge.source);
                         const b = layout.positions.get(edge.target);
                         if (!a || !b) return null;
@@ -372,23 +414,27 @@ export default function GraphPage() {
                   </g>
                 </svg>
                 <p className="mt-1 text-2xs text-text-faint">
-                  drag to pan · wheel or ± to zoom · double-click to reset
+                  {t("drag to pan · wheel or ± to zoom · double-click to reset")}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs text-text-faint">
                   <span>
-                    nodes: {nodes.length} · edges: {edges.length} ·{" "}
-                    {formatNumber(edges.reduce((sum, e) => sum + e.bytes_total, 0))} bytes
-                    observed
+                    {t("nodes: {nodes} · edges: {edges} · {bytes} bytes observed", {
+                      nodes: formatNumber(nodes.length),
+                      edges: formatNumber(edgesShown.length),
+                      bytes: formatNumber(
+                        edgesShown.reduce((sum, e) => sum + e.bytes_total, 0),
+                      ),
+                    })}
                   </span>
                   {hubNodes.length > 0 && (
                     <span className="flex items-center gap-1 text-status-warn">
                       <span className="inline-block h-2 w-2 rounded-full border border-dashed border-status-warn" />
-                      {hubNodes.length} hub candidate(s)
+                      {t("{count} hub candidate(s)", { count: hubNodes.length })}
                     </span>
                   )}
                   {selected && (
                     <button type="button" className="btn" onClick={() => setSelected(null)}>
-                      clear selection
+                      {t("clear selection")}
                     </button>
                   )}
                 </div>
@@ -400,8 +446,8 @@ export default function GraphPage() {
               </div>
             ) : (
               <EmptyState
-                title="No analysed captures"
-                description="Run an analysis on at least one capture to build the graph."
+                title={t("No analysed captures")}
+                description={t("Run an analysis on at least one capture to build the graph.")}
               />
             )}
           </Panel>
@@ -409,33 +455,33 @@ export default function GraphPage() {
 
         <div className="space-y-3">
           {selectedNode && (
-            <Panel title={`Node: ${selectedNode.label}`}>
+            <Panel title={t("Node: {label}", { label: selectedNode.label })}>
               <div className="space-y-2 p-3">
                 <dl className="grid grid-cols-2 gap-1 font-mono text-2xs">
-                  <Stat label="bytes" value={formatNumber(selectedNode.bytes_total)} />
-                  <Stat label="peers" value={String(selectedNode.unique_peers)} />
+                  <Stat label={t("bytes")} value={formatNumber(selectedNode.bytes_total)} />
+                  <Stat label={t("peers")} value={String(selectedNode.unique_peers)} />
                   <Stat
-                    label="degree"
+                    label={t("degree")}
                     value={selectedNode.degree_centrality.toFixed(3)}
                   />
                   <Stat
-                    label="betweenness"
+                    label={t("betweenness")}
                     value={
                       selectedNode.betweenness === null
-                        ? "not computed"
+                        ? t("not computed")
                         : selectedNode.betweenness.toFixed(4)
                     }
                   />
                 </dl>
                 {selectedNode.hub_candidate ? (
                   <div className="space-y-1">
-                    <Badge tone="warn">hub candidate</Badge>
+                    <Badge tone="warn">{t("hub candidate")}</Badge>
                     <p className="text-2xs text-text-muted">{selectedNode.hub_reason}</p>
                   </div>
                 ) : null}
                 <div>
                   <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
-                    Observed connections
+                    {t("Observed connections")}
                   </p>
                   <ul className="space-y-0.5 font-mono text-2xs">
                     {connectedEdges.map((edge, index) => (
@@ -444,7 +490,7 @@ export default function GraphPage() {
                           {edge.source === selectedNode.id ? edge.target : edge.source}
                         </span>
                         <span className="text-text-faint">
-                          {formatNumber(edge.bytes_total)} B
+                          {t("{bytes} B", { bytes: formatNumber(edge.bytes_total) })}
                         </span>
                       </li>
                     ))}
@@ -454,9 +500,9 @@ export default function GraphPage() {
             </Panel>
           )}
 
-          <Panel title="Centrality ranking">
+          <Panel title={t("Centrality ranking")}>
             {centrality.length === 0 ? (
-              <EmptyState title="No centrality computed" />
+              <EmptyState title={t("No centrality computed")} />
             ) : (
               <ol className="space-y-1 p-3">
                 {centrality.map((entry) => (
@@ -478,18 +524,21 @@ export default function GraphPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           {entry.node.hub_candidate ? (
-                            <Badge tone="warn">hub</Badge>
+                            <Badge tone="warn">{t("hub")}</Badge>
                           ) : null}
                           <Badge tone="info">
-                            deg {entry.node.degree_centrality.toFixed(2)}
+                            {t("deg {value}", {
+                              value: entry.node.degree_centrality.toFixed(2),
+                            })}
                           </Badge>
                         </span>
                       </div>
                       <p className="mt-0.5 text-2xs text-text-faint">
-                        betweenness{" "}
                         {entry.node.betweenness === null
-                          ? "n/a"
-                          : entry.node.betweenness.toFixed(4)}
+                          ? t("betweenness n/a")
+                          : t("betweenness {value}", {
+                              value: entry.node.betweenness.toFixed(4),
+                            })}
                       </p>
                     </button>
                   </li>

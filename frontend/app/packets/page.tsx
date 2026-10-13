@@ -16,6 +16,7 @@ import { useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 const PAGE_SIZE = 250;
 const TRANSPORTS = ["TCP", "UDP", "ICMP", "IGMP", "other"];
@@ -42,6 +43,7 @@ function bytesToLines(bytes: Uint8Array): {
 
 export default function PacketsPage() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const captureId = workspace.captureId;
 
   const [search, setSearch] = useState("");
@@ -122,11 +124,11 @@ export default function PacketsPage() {
     return (
       <div className="p-4">
         <EmptyState
-          title="No capture selected"
-          description="The packet table lists the packets of one capture. Pick a capture first."
+          title={t("No capture selected")}
+          description={t("The packet table lists the packets of one capture. Pick a capture first.")}
           action={
             <Link href="/captures" className="btn btn-primary">
-              Go to Captures
+              {t("Go to Captures")}
             </Link>
           }
         />
@@ -137,17 +139,18 @@ export default function PacketsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h1 className="text-sm font-semibold tracking-tight text-text">Packets</h1>
+        <h1 className="text-sm font-semibold tracking-tight text-text">{t("Packets")}</h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          The packets of this capture as imported (offsets, flags, lengths). Rows
-          are only rendered while visible; click a packet to see its original bytes.
+          {t(
+            "The packets of this capture as imported (offsets, flags, lengths). Rows are only rendered while visible; click a packet to see its original bytes.",
+          )}
         </p>
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line px-3 py-2">
         <input
           className="input h-7 w-44 font-mono text-2xs"
-          placeholder="search address…"
+          placeholder={t("search address…")}
           value={search}
           onChange={(event) => {
             setSearch(event.target.value);
@@ -162,16 +165,16 @@ export default function PacketsPage() {
             setOffset(0);
           }}
         >
-          <option value="">any transport</option>
+          <option value="">{t("any transport")}</option>
           {TRANSPORTS.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {t(item)}
             </option>
           ))}
         </select>
         <input
           className="input h-7 w-24 font-mono text-2xs"
-          placeholder="min payload"
+          placeholder={t("min payload")}
           inputMode="numeric"
           value={minPayload}
           onChange={(event) => {
@@ -180,7 +183,11 @@ export default function PacketsPage() {
           }}
         />
         <span className="text-2xs text-text-faint">
-          {formatNumber(total)} packet(s) · page {page + 1}/{pageCount}
+          {t("{count} packet(s) · page {page}/{pageCount}", {
+            count: formatNumber(total),
+            page: page + 1,
+            pageCount,
+          })}
         </span>
         <div className="ml-auto flex gap-1.5">
           <button
@@ -189,7 +196,7 @@ export default function PacketsPage() {
             disabled={offset === 0 || packets.state === "loading"}
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
           >
-            Prev
+            {t("Prev")}
           </button>
           <button
             type="button"
@@ -197,15 +204,15 @@ export default function PacketsPage() {
             disabled={offset + PAGE_SIZE >= total || packets.state === "loading"}
             onClick={() => setOffset(offset + PAGE_SIZE)}
           >
-            Next
+            {t("Next")}
           </button>
         </div>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-[1fr_420px]">
         <Panel
-          title="Packet table"
-          actions={<Badge tone="neutral">{formatNumber(items.length)} rendered</Badge>}
+          title={t("Packet table")}
+          actions={<Badge tone="neutral">{t("{count} rendered", { count: formatNumber(items.length) })}</Badge>}
         >
           <div className="h-full">
             {packets.state === "error" ? (
@@ -222,11 +229,13 @@ export default function PacketsPage() {
           </div>
         </Panel>
 
-        <Panel title="Packet bytes">
+        <Panel title={t("Packet bytes")}>
           {selectedIndex == null ? (
             <EmptyState
-              title="No packet selected"
-              description="Click a row to fetch the original on-disk bytes of that packet from the immutable capture file."
+              title={t("No packet selected")}
+              description={t(
+                "Click a row to fetch the original on-disk bytes of that packet from the immutable capture file.",
+              )}
             />
           ) : rawLoading ? (
             <Skeleton rows={10} />
@@ -235,7 +244,10 @@ export default function PacketsPage() {
           ) : rawBytes ? (
             <div className="overflow-auto p-2">
               <p className="pb-2 text-2xs text-text-faint">
-                Packet #{selectedIndex} · {formatNumber(rawBytes.length)} byte(s)
+                {t("Packet #{index} · {count} byte(s)", {
+                  index: selectedIndex,
+                  count: formatNumber(rawBytes.length),
+                })}
               </p>
               <HexViewer lines={bytesToLines(rawBytes)} dense />
             </div>

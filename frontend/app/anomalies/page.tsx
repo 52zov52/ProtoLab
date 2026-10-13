@@ -14,9 +14,11 @@ import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 export default function AnomaliesPage() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const params = useSearchParams();
   const projectId = params.get("project") ?? workspace.projectId;
   const [scope, setScope] = useState<"messages" | "sessions">("messages");
@@ -29,7 +31,7 @@ export default function AnomaliesPage() {
   if (!projectId) {
     return (
       <div className="p-4">
-        <EmptyState title="No project selected" />
+        <EmptyState title={t("No project selected")} />
       </div>
     );
   }
@@ -40,11 +42,12 @@ export default function AnomaliesPage() {
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
         <h1 className="text-sm font-semibold tracking-tight text-text">
-          Anomaly Detection
+          {t("Anomaly Detection")}
         </h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          Isolation Forest over a baseline corpus. Scores rank how unusual an entity is
-          relative to that corpus; they are not probabilities and carry no severity.
+          {t(
+            "Isolation Forest over a baseline corpus. Scores rank how unusual an entity is relative to that corpus; they are not probabilities and carry no severity.",
+          )}
         </p>
       </div>
 
@@ -52,9 +55,9 @@ export default function AnomaliesPage() {
         {status.state === "loading" ? (
           <Skeleton rows={4} />
         ) : !available ? (
-          <Panel title="Unavailable">
+          <Panel title={t("Unavailable")}>
             <div className="space-y-2 p-3">
-              <Badge tone="warn">scikit-learn is not installed</Badge>
+              <Badge tone="warn">{t("scikit-learn is not installed")}</Badge>
               <p className="text-2xs text-text-muted">
                 {String(status.data?.availability_note ?? "")}
               </p>
@@ -62,14 +65,15 @@ export default function AnomaliesPage() {
 {`python -m pip install "madrigal-protocol-lab-backend[analytics]"`}
               </pre>
               <Caveat>
-                The product is fully usable without this module. Nothing else degrades
-                when anomaly detection is unavailable.
+                {t(
+                  "The product is fully usable without this module. Nothing else degrades when anomaly detection is unavailable.",
+                )}
               </Caveat>
             </div>
           </Panel>
         ) : (
           <>
-            <Panel title="Train a baseline">
+            <Panel title={t("Train a baseline")}>
               <TrainForm
                 projectId={projectId}
                 scope={scope}
@@ -88,7 +92,7 @@ export default function AnomaliesPage() {
             </Panel>
 
             {latest && (
-              <Panel title="Latest model">
+              <Panel title={t("Latest model")}>
                 <div className="space-y-2 p-3 font-mono text-2xs">
                   <pre className="max-h-96 overflow-auto rounded-sm border border-line bg-surface-sunken p-2">
                     {JSON.stringify(latest, null, 2)}
@@ -122,15 +126,16 @@ function TrainForm({
   pending: boolean;
   onTrain: (body: Record<string, unknown>) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
   const captures = useAsync(() => api.projectCaptures(projectId), [projectId]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [name, setName] = useState("Baseline model");
+  const [name, setName] = useState(t("Baseline model"));
 
   return (
     <div className="grid gap-3 p-3 md:grid-cols-3">
       <label className="block">
         <span className="mb-1 block text-2xs uppercase tracking-wider text-text-faint">
-          Model name
+          {t("Model name")}
         </span>
         <input
           className="input"
@@ -141,15 +146,15 @@ function TrainForm({
       </label>
       <label className="block">
         <span className="mb-1 block text-2xs uppercase tracking-wider text-text-faint">
-          Scope
+          {t("Scope")}
         </span>
         <select
           className="input"
           value={scope}
           onChange={(event) => onScopeChange(event.target.value as "messages" | "sessions")}
         >
-          <option value="messages">messages</option>
-          <option value="sessions">sessions</option>
+          <option value="messages">{t("messages")}</option>
+          <option value="sessions">{t("sessions")}</option>
         </select>
       </label>
       <div className="flex items-end">
@@ -168,13 +173,13 @@ function TrainForm({
             })
           }
         >
-          {pending ? "Training…" : "Train baseline"}
+          {pending ? t("Training…") : t("Train baseline")}
         </button>
       </div>
 
       <div className="md:col-span-3">
         <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
-          Baseline corpus
+          {t("Baseline corpus")}
         </p>
         {captures.state === "loading" ? (
           <Skeleton rows={2} />

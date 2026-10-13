@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { useAction, useAsync } from "@/hooks/use-async";
 import { checkTone, cn } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 type Check = {
   id: string;
@@ -24,6 +25,7 @@ type Check = {
 
 export default function SecurityPage() {
   const report = useAsync(() => api_securityReport(), []);
+  const { t } = useI18n();
   const action = useAction();
   const [tab, setTab] = useState<"checks" | "audit">("checks");
 
@@ -39,10 +41,11 @@ export default function SecurityPage() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-4 py-3">
         <div>
-          <h1 className="text-sm font-semibold tracking-tight text-text">Security Center</h1>
+          <h1 className="text-sm font-semibold tracking-tight text-text">{t("Security Center")}</h1>
           <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-            Real local checks with honest verdicts. A check that could not be performed
-            says so; nothing here is a penetration test or a certification.
+            {t(
+              "Real local checks with honest verdicts. A check that could not be performed says so; nothing here is a penetration test or a certification.",
+            )}
           </p>
         </div>
         <button
@@ -55,7 +58,7 @@ export default function SecurityPage() {
           }}
         >
           <ShieldCheck className="h-3 w-3" aria-hidden />
-          {action.pending ? "Checking…" : "Run configuration check"}
+          {action.pending ? t("Checking…") : t("Run configuration check")}
         </button>
       </div>
 
@@ -67,7 +70,7 @@ export default function SecurityPage() {
             className={cn("btn", tab === name && "btn-primary")}
             onClick={() => setTab(name)}
           >
-            {name === "checks" ? "Configuration checks" : "Audit log"}
+            {name === "checks" ? t("Configuration checks") : t("Audit log")}
           </button>
         ))}
       </div>
@@ -83,7 +86,7 @@ export default function SecurityPage() {
           report.state === "loading" ? (
             <Skeleton rows={10} />
           ) : checks.length === 0 ? (
-            <EmptyState title="No checks available" />
+            <EmptyState title={t("No checks available")} />
           ) : (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
@@ -94,11 +97,11 @@ export default function SecurityPage() {
                 ))}
               </div>
 
-              <Panel title="Runtime">
+              <Panel title={t("Runtime")}>
                 <dl className="grid gap-2 p-3 font-mono text-2xs sm:grid-cols-3">
-                  <Field label="mode" value={String(data?.mode ?? "-")} />
+                  <Field label={t("mode")} value={String(data?.mode ?? "-")} />
                   <Field
-                    label="bind"
+                    label={t("bind")}
                     value={
                       ((data?.bind ?? {}) as { host: string; port: number }).host +
                       ":" +
@@ -106,7 +109,7 @@ export default function SecurityPage() {
                     }
                   />
                   <Field
-                    label="platform"
+                    label={t("platform")}
                     value={String(
                       (data?.platform as { system?: string; release?: string } | undefined)
                         ?.system ?? "-",
@@ -115,7 +118,7 @@ export default function SecurityPage() {
                 </dl>
               </Panel>
 
-              <Panel title="Checks">
+              <Panel title={t("Checks")}>
                 <ul className="divide-y divide-line/60">
                   {checks.map((check) => (
                     <li key={check.id} className="px-3 py-2">
@@ -139,7 +142,7 @@ export default function SecurityPage() {
                 </ul>
               </Panel>
 
-              <Panel title="Integrations">
+              <Panel title={t("Integrations")}>
                 <ul className="space-y-2 p-3 text-2xs">
                   {Object.entries(
                     (data?.integrations ?? {}) as Record<string, Record<string, unknown>>,
@@ -163,7 +166,7 @@ export default function SecurityPage() {
                 </ul>
               </Panel>
 
-              <Panel title="Documented limits">
+              <Panel title={t("Documented limits")}>
                 <ul className="space-y-1 p-3">
                   {((data?.documented_limits ?? []) as string[]).map((limit, index) => (
                     <li key={index} className="text-2xs text-text-muted">
@@ -181,13 +184,13 @@ export default function SecurityPage() {
           )
         ) : (
           <div className="space-y-3">
-            <Panel title="Audit chain integrity">
+            <Panel title={t("Audit chain integrity")}>
               {chain.state === "loading" ? (
                 <Skeleton rows={2} />
               ) : chain.data ? (
                 <div className="space-y-1 p-3">
                   <Badge tone={chain.data.valid ? "ok" : "bad"}>
-                    {chain.data.valid ? "chain verified" : "chain broken"}
+                    {chain.data.valid ? t("chain verified") : t("chain broken")}
                   </Badge>
                   <p className="text-2xs text-text-muted">
                     {String(chain.data.explanation ?? "")}
@@ -196,18 +199,18 @@ export default function SecurityPage() {
               ) : null}
             </Panel>
 
-            <Panel title="Security events">
+            <Panel title={t("Security events")}>
               {audit.state === "loading" ? (
                 <Skeleton rows={10} />
               ) : audit.data ? (
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Time</th>
-                      <th>Action</th>
-                      <th>Outcome</th>
-                      <th>Risk</th>
-                      <th>Object</th>
+                      <th>{t("Time")}</th>
+                      <th>{t("Action")}</th>
+                      <th>{t("Outcome")}</th>
+                      <th>{t("Risk")}</th>
+                      <th>{t("Object")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -239,7 +242,7 @@ export default function SecurityPage() {
                   </tbody>
                 </table>
               ) : (
-                <EmptyState title="No audit events" />
+                <EmptyState title={t("No audit events")} />
               )}
             </Panel>
           </div>

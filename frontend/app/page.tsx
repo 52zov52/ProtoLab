@@ -17,9 +17,11 @@ import {
 import { useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { formatBytes, formatNumber } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 export default function OverviewPage() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const params = useSearchParams();
   const projectParam = params.get("project");
 
@@ -60,10 +62,11 @@ export default function OverviewPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h1 className="text-sm font-semibold tracking-tight text-text">Overview</h1>
+        <h1 className="text-sm font-semibold tracking-tight text-text">{t("Overview")}</h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          Every number below is computed from the current project state. Nothing here is
-          seeded, estimated or carried over from a demo dataset.
+          {t(
+            "Every number below is computed from the current project state. Nothing here is seeded, estimated or carried over from a demo dataset.",
+          )}
         </p>
       </div>
 
@@ -71,8 +74,10 @@ export default function OverviewPage() {
         {!workspace.projectId ? (
           <div className="mx-auto max-w-3xl">
             <EmptyState
-              title="Start an investigation"
-              description="A project holds the imported captures, the reconstructed streams, the hypotheses you form and the evidence that supports or contradicts them. Create one, or open an existing one, then import a PCAP."
+              title={t("Start an investigation")}
+              description={t(
+                "A project holds the imported captures, the reconstructed streams, the hypotheses you form and the evidence that supports or contradicts them. Create one, or open an existing one, then import a PCAP.",
+              )}
             />
             <div className="mt-4">
               <ProjectPicker />
@@ -85,58 +90,61 @@ export default function OverviewPage() {
             )}
 
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
-              <Metric label="Captures" value={data ? formatNumber(data.captures) : "—"} />
-              <Metric label="Packets" value={data ? formatNumber(data.packets) : "—"} />
+              <Metric label={t("Captures")} value={data ? formatNumber(data.captures) : "—"} />
+              <Metric label={t("Packets")} value={data ? formatNumber(data.packets) : "—"} />
               <Metric
-                label="TCP sessions"
+                label={t("TCP sessions")}
                 value={data ? formatNumber(data.tcp_sessions) : "—"}
-                hint={data?.tcp_sessions ? "5-tuple aware" : undefined}
+                hint={data?.tcp_sessions ? t("5-tuple aware") : undefined}
               />
               <Metric
-                label="Streams"
+                label={t("Streams")}
                 value={data ? formatNumber(data.streams) : "—"}
-                hint="both directions"
+                hint={t("both directions")}
               />
               <Metric
-                label="Messages"
+                label={t("Messages")}
                 value={data ? formatNumber(data.messages) : "—"}
-                hint="depends on a framing rule"
+                hint={t("depends on a framing rule")}
               />
               <Metric
-                label="Bytes on disk"
+                label={t("Bytes on disk")}
                 value={data ? formatBytes(data.bytes_stored) : "—"}
               />
               <Metric
-                label="Hypotheses"
+                label={t("Hypotheses")}
                 value={data ? formatNumber(data.hypotheses) : "—"}
               />
               <Metric
-                label="Interpretations"
+                label={t("Interpretations")}
                 value={data ? formatNumber(data.interpretations) : "—"}
-                hint="executable rules"
+                hint={t("executable rules")}
               />
-              <Metric label="Validation runs" value={data ? formatNumber(data.validation_runs) : "—"} />
               <Metric
-                label="Counterexamples"
+                label={t("Validation runs")}
+                value={data ? formatNumber(data.validation_runs) : "—"}
+              />
+              <Metric
+                label={t("Counterexamples")}
                 value={data ? formatNumber(data.counterexamples) : "—"}
                 tone={data && data.counterexamples > 0 ? "warn" : undefined}
-                hint="messages that break a rule"
+                hint={t("messages that break a rule")}
               />
               <Metric
-                label="Problem sessions"
+                label={t("Problem sessions")}
                 value={data ? formatNumber(data.sessions_with_reconstruction_problems) : "—"}
                 tone={
                   data && data.sessions_with_reconstruction_problems > 0 ? "warn" : "ok"
                 }
-                hint="incomplete or conflicting"
+                hint={t("incomplete or conflicting")}
               />
               <Metric
-                label="Anomaly detection"
+                label={t("Anomaly detection")}
                 value={
                   analyzers.state === "ready"
                     ? analyzers.data?.available
-                      ? "available"
-                      : "unavailable"
+                      ? t("available")
+                      : t("unavailable")
                     : "—"
                 }
                 tone={analyzers.data?.available ? "ok" : "unknown"}
@@ -144,7 +152,7 @@ export default function OverviewPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <Panel title="Source integrity">
+              <Panel title={t("Source integrity")}>
                 {integrity.state === "loading" ? (
                   <Skeleton rows={4} />
                 ) : integrity.data ? (
@@ -152,8 +160,8 @@ export default function OverviewPage() {
                     <div className="flex items-center gap-2">
                       <Badge tone={integrity.data.all_match ? "ok" : "bad"}>
                         {integrity.data.all_match
-                          ? "all captures match their recorded hashes"
-                          : "hash mismatch detected"}
+                          ? t("all captures match their recorded hashes")
+                          : t("hash mismatch detected")}
                       </Badge>
                     </div>
                     <ul className="space-y-1 font-mono text-2xs">
@@ -177,17 +185,17 @@ export default function OverviewPage() {
                       )}
                     </ul>
                     <Caveat>
-                      SHA-256 detects unintended modification when a trusted reference
-                      exists. It does not prove where a file came from and provides no
-                      confidentiality.
+                      {t(
+                        "SHA-256 detects unintended modification when a trusted reference exists. It does not prove where a file came from and provides no confidentiality.",
+                      )}
                     </Caveat>
                   </div>
                 ) : (
-                  <EmptyState title="No integrity data" />
+                  <EmptyState title={t("No integrity data")} />
                 )}
               </Panel>
 
-              <Panel title="Analyzer versions in use">
+              <Panel title={t("Analyzer versions in use")}>
                 <div className="space-y-2 p-3">
                   {data && Object.keys(data.analyst_versions).length > 0 ? (
                     Object.entries(data.analyst_versions).map(([key, version]) => (
@@ -198,12 +206,15 @@ export default function OverviewPage() {
                     ))
                   ) : (
                     <p className="text-2xs text-text-faint">
-                      Run an analysis to record which analyzer version produced these results.
+                      {t(
+                        "Run an analysis to record which analyzer version produced these results.",
+                      )}
                     </p>
                   )}
                   <Caveat>
-                    Results are only reproducible with the same analyzer version and the
-                    same recorded options. Both are stored with every run.
+                    {t(
+                      "Results are only reproducible with the same analyzer version and the same recorded options. Both are stored with every run.",
+                    )}
                   </Caveat>
                 </div>
               </Panel>
@@ -211,7 +222,7 @@ export default function OverviewPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <CapturePicker />
-              <Panel title="Research path">
+              <Panel title={t("Research path")}>
                 <ol className="space-y-2 p-3 text-2xs text-text-muted">
                   {[
                     ["Import a capture", "/captures"],
@@ -224,7 +235,7 @@ export default function OverviewPage() {
                     <li key={href} className="flex items-start gap-2">
                       <span className="mt-0.5 font-mono text-text-faint">{index + 1}.</span>
                       <Link className="link" href={`${href}?project=${workspace.projectId}`}>
-                        {label}
+                        {t(label)}
                       </Link>
                     </li>
                   ))}

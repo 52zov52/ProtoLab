@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { cn, toneClasses, type StatusTone } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 // --------------------------------------------------------------------------
 // Primitives shared by every tool panel.
@@ -26,7 +27,7 @@ export function Panel({
       {(title || actions) && (
         <header className="panel-header shrink-0">
           <h2 className="panel-title">{title}</h2>
-          <div className="flex items-center gap-2">{actions}</div>
+          <div className="flex shrink-0 items-center gap-2">{actions}</div>
         </header>
       )}
       <div className={cn("min-h-0 flex-1 overflow-auto", bodyClassName)}>{children}</div>
@@ -69,29 +70,33 @@ export function EmptyState({
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useI18n();
   return (
     <div
       className="m-3 rounded-sm border border-status-bad/40 bg-status-bad/5 p-3"
       role="alert"
     >
       <p className="text-2xs font-semibold uppercase tracking-wider text-status-bad">
-        Request failed
+        {t("Request failed")}
       </p>
       <p className="mt-1 font-mono text-2xs text-text">{message}</p>
       {onRetry && (
         <button type="button" className="btn mt-2" onClick={onRetry}>
-          Retry
+          {t("Retry")}
         </button>
       )}
     </div>
   );
 }
 
-export function Loading({ label = "Loading" }: { label?: string }) {
+export function Loading({ label }: { label?: string }) {
+  const { t } = useI18n();
   return (
     <div className="flex h-full min-h-[120px] items-center justify-center gap-2 p-4">
       <span className="h-3 w-3 animate-spin rounded-full border border-line-strong border-t-accent" />
-      <span className="text-2xs uppercase tracking-widest text-text-faint">{label}</span>
+      <span className="text-2xs uppercase tracking-widest text-text-faint">
+        {label ?? t("Loading")}
+      </span>
     </div>
   );
 }
@@ -180,6 +185,7 @@ export function ConfirmButton({
   tone?: string;
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
   const [armed, setArmed] = useState(false);
 
   // Disarm on the next tick unless the user confirms, so the button cannot
@@ -207,9 +213,9 @@ export function ConfirmButton({
           type="button"
           className="btn"
           onClick={() => setArmed(false)}
-          title="Cancel"
+          title={t("Cancel")}
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </span>
     );

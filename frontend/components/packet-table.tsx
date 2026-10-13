@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui";
 import { cn, formatTimestamp } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 export const PACKET_ROW_HEIGHT = 30;
 
@@ -65,6 +66,7 @@ export function PacketTable({
   selectedIndex: number | null;
   onSelect: (packetIndex: number) => void;
 }) {
+  const { t } = useI18n();
   const [scrollTop, setScrollTop] = useState(0);
   const [viewHeight, setViewHeight] = useState(0);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -88,7 +90,7 @@ export function PacketTable({
   if (items.length === 0) {
     return (
       <p className="px-3 py-6 text-center text-2xs text-text-faint">
-        No packets match the current filters.
+        {t("No packets match the current filters.")}
       </p>
     );
   }
@@ -97,7 +99,7 @@ export function PacketTable({
     <div
       ref={viewportRef}
       role="table"
-      aria-label="Packets"
+      aria-label={t("Packets")}
       className="overflow-auto"
       style={{ height: "100%", minHeight: 220 }}
       onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
@@ -106,14 +108,14 @@ export function PacketTable({
         <thead className="sticky top-0 z-10">
           <tr>
             <th className="w-14">#</th>
-            <th>Time</th>
-            <th>Source</th>
-            <th>Destination</th>
-            <th className="w-14">Proto</th>
-            <th className="w-16">Flags</th>
-            <th className="w-14">Len</th>
-            <th className="w-14">Payload</th>
-            <th className="w-14">State</th>
+            <th>{t("Time")}</th>
+            <th>{t("Source")}</th>
+            <th>{t("Destination")}</th>
+            <th className="w-14">{t("Proto")}</th>
+            <th className="w-16">{t("Flags")}</th>
+            <th className="w-14">{t("Len")}</th>
+            <th className="w-14">{t("Payload")}</th>
+            <th className="w-14">{t("State")}</th>
           </tr>
         </thead>
         <tbody>
@@ -135,7 +137,7 @@ export function PacketTable({
                   selected && "bg-accent-faint",
                 )}
                 onClick={() => onSelect(row.packet_index)}
-                title={`Packet #${row.packet_index}`}
+                title={t("Packet #{index}", { index: row.packet_index })}
               >
                 <td className="text-accent">{row.packet_index}</td>
                 <td className="whitespace-nowrap text-text-muted">
@@ -165,9 +167,9 @@ export function PacketTable({
                 <td className="text-2xs text-text-muted">{row.payload_length}</td>
                 <td>
                   {truncated ? (
-                    <Badge tone="warn">truncated</Badge>
+                    <Badge tone="warn">{t("truncated")}</Badge>
                   ) : (
-                    <span className="text-2xs text-text-faint">ok</span>
+                    <span className="text-2xs text-text-faint">{t("ok")}</span>
                   )}
                 </td>
               </tr>

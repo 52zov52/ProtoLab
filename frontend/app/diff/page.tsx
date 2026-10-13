@@ -15,10 +15,12 @@ import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { heatCells, maxAbs, similarityColor } from "@/lib/diff-heatmap";
+import { useI18n } from "@/lib/i18n";
 
 export default function DiffPage() {
   const workspace = useWorkspace();
   const params = useSearchParams();
+  const { t } = useI18n();
   const projectId = params.get("project") ?? workspace.projectId;
   const [base, setBase] = useState("");
   const [compare, setCompare] = useState("");
@@ -48,7 +50,7 @@ export default function DiffPage() {
   if (!projectId) {
     return (
       <div className="p-4">
-        <EmptyState title="No project selected" />
+        <EmptyState title={t("No project selected")} />
       </div>
     );
   }
@@ -72,26 +74,27 @@ export default function DiffPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h1 className="text-sm font-semibold tracking-tight text-text">Capture Diff</h1>
+        <h1 className="text-sm font-semibold tracking-tight text-text">{t("Capture Diff")}</h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          Sessions are matched on endpoints, direction, sizes and message-length shape —
-          not on packet numbers, which stop corresponding as soon as behaviour changes.
+          {t(
+            "Sessions are matched on endpoints, direction, sizes and message-length shape — not on packet numbers, which stop corresponding as soon as behaviour changes.",
+          )}
         </p>
       </div>
 
       <div className="space-y-3 overflow-auto p-3">
-        <Panel title="Comparison setup">
+        <Panel title={t("Comparison setup")}>
           <div className="grid gap-3 p-3 md:grid-cols-4">
             <label className="block">
               <span className="mb-1 block text-2xs uppercase tracking-wider text-text-faint">
-                Baseline
+                {t("Baseline")}
               </span>
               <select
                 className="input"
                 value={base}
                 onChange={(event) => setBase(event.target.value)}
               >
-                <option value="">select a capture</option>
+                <option value="">{t("select a capture")}</option>
                 {(captures.data ?? []).map((capture) => (
                   <option key={capture.id} value={capture.id}>
                     {capture.name}
@@ -101,14 +104,14 @@ export default function DiffPage() {
             </label>
             <label className="block">
               <span className="mb-1 block text-2xs uppercase tracking-wider text-text-faint">
-                Compare with
+                {t("Compare with")}
               </span>
               <select
                 className="input"
                 value={compare}
                 onChange={(event) => setCompare(event.target.value)}
               >
-                <option value="">select a capture</option>
+                <option value="">{t("select a capture")}</option>
                 {(captures.data ?? []).map((capture) => (
                   <option key={capture.id} value={capture.id}>
                     {capture.name}
@@ -118,7 +121,7 @@ export default function DiffPage() {
             </label>
             <label className="block">
               <span className="mb-1 block text-2xs uppercase tracking-wider text-text-faint">
-                Focus
+                {t("Focus")}
               </span>
               <select
                 className="input"
@@ -128,7 +131,7 @@ export default function DiffPage() {
                 {["all", "endpoints", "sessions", "messages", "bytes", "diagnostics"].map(
                   (option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {t(option)}
                     </option>
                   ),
                 )}
@@ -137,8 +140,8 @@ export default function DiffPage() {
             <div className="flex items-end">
               <Badge tone={base && compare && base !== compare ? "info" : "warn"}>
                 {base && compare && base !== compare
-                  ? "ready"
-                  : "choose two different captures"}
+                  ? t("ready")
+                  : t("choose two different captures")}
               </Badge>
             </div>
           </div>
@@ -150,8 +153,10 @@ export default function DiffPage() {
         {!base || !compare ? (
           <Panel>
             <EmptyState
-              title="Select a baseline and a comparison capture"
-              description="The result is a heat map of differences. A difference is not an anomaly: it only means this recording differs from that one."
+              title={t("Select a baseline and a comparison capture")}
+              description={t(
+                "The result is a heat map of differences. A difference is not an anomaly: it only means this recording differs from that one.",
+              )}
             />
           </Panel>
         ) : result.state === "loading" ? (
@@ -160,9 +165,9 @@ export default function DiffPage() {
           </Panel>
         ) : result.data ? (
           <>
-            <Panel title="Session heat map">
+            <Panel title={t("Session heat map")}>
               <div className="flex flex-wrap items-center gap-3 border-b border-line px-3 py-2 text-2xs text-text-faint">
-                <span className="uppercase tracking-wider">similarity</span>
+                <span className="uppercase tracking-wider">{t("similarity")}</span>
                 {[0, 0.25, 0.5, 0.75, 1].map((value) => (
                   <span key={value} className="flex items-center gap-1">
                     <span
@@ -173,18 +178,18 @@ export default function DiffPage() {
                   </span>
                 ))}
                 <span className="ml-auto">
-                  Δ shade = magnitude · blue growth · amber shrink · empty = no change
+                  {t("Δ shade = magnitude · blue growth · amber shrink · empty = no change")}
                 </span>
               </div>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Status</th>
-                    <th>Endpoints</th>
-                    <th>Similarity</th>
-                    <th>Byte Δ</th>
-                    <th>Packet Δ</th>
-                    <th>Why</th>
+                    <th>{t("Status")}</th>
+                    <th>{t("Endpoints")}</th>
+                    <th>{t("Similarity")}</th>
+                    <th>{t("Byte Δ")}</th>
+                    <th>{t("Packet Δ")}</th>
+                    <th>{t("Why")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -265,11 +270,11 @@ export default function DiffPage() {
                           router.push("/sessions");
                         }}
                       >
-                        Open baseline session
+                        {t("Open baseline session")}
                       </button>
                     ) : (
                       <span className="text-2xs text-text-faint">
-                        no baseline session
+                        {t("no baseline session")}
                       </span>
                     )}
                     {selected.compare_session_id ? (
@@ -281,11 +286,11 @@ export default function DiffPage() {
                           router.push("/sessions");
                         }}
                       >
-                        Open comparison session
+                        {t("Open comparison session")}
                       </button>
                     ) : (
                       <span className="text-2xs text-text-faint">
-                        no comparison session
+                        {t("no comparison session")}
                       </span>
                     )}
                   </div>
@@ -300,20 +305,20 @@ export default function DiffPage() {
 
             {typeof result.data.endpoints === "object" &&
               result.data.endpoints !== null && (
-                <Panel title="Endpoints">
+                <Panel title={t("Endpoints")}>
                   <div className="grid gap-3 p-3 md:grid-cols-3">
                     <EndpointList
-                      title="added"
+                      title={t("added")}
                       items={(result.data.endpoints as { added: string[] }).added}
                       tone="info"
                     />
                     <EndpointList
-                      title="removed"
+                      title={t("removed")}
                       items={(result.data.endpoints as { removed: string[] }).removed}
                       tone="bad"
                     />
                     <EndpointList
-                      title="common"
+                      title={t("common")}
                       items={(result.data.endpoints as { common: string[] }).common}
                       tone="ok"
                     />
@@ -322,16 +327,16 @@ export default function DiffPage() {
               )}
 
             {Array.isArray(result.data.diagnostics) && (
-              <Panel title="Message-level differences">
+              <Panel title={t("Message-level differences")}>
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Dir</th>
+                      <th>{t("Dir")}</th>
                       <th>#</th>
-                      <th>Status</th>
-                      <th>Base len</th>
-                      <th>Compare len</th>
-                      <th>Bytes changed</th>
+                      <th>{t("Status")}</th>
+                      <th>{t("Base len")}</th>
+                      <th>{t("Compare len")}</th>
+                      <th>{t("Bytes changed")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -388,6 +393,8 @@ function EndpointList({
   items: string[];
   tone: "info" | "bad" | "ok";
 }) {
+  const { t } = useI18n();
+
   return (
     <div>
       <p className="mb-1">
@@ -397,7 +404,7 @@ function EndpointList({
       </p>
       <ul className="space-y-0.5 font-mono text-2xs text-text-muted">
         {items.length === 0 ? (
-          <li className="text-text-faint">none</li>
+          <li className="text-text-faint">{t("none")}</li>
         ) : (
           items.map((item) => <li key={item}>{item}</li>)
         )}

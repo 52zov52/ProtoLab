@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { cn, toHexRows } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 export interface Hole {
   start: number;
@@ -38,6 +39,7 @@ export function HexViewer({
   onOffsetClick,
   dense = false,
 }: HexViewerProps) {
+  const { t } = useI18n();
   const rows = useMemo(() => toHexRows(lines), [lines]);
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -52,7 +54,7 @@ export function HexViewer({
   if (rows.length === 0) {
     return (
       <p className="p-3 text-2xs text-text-faint">
-        No bytes to display at this offset.
+        {t("No bytes to display at this offset.")}
       </p>
     );
   }
@@ -73,8 +75,8 @@ export function HexViewer({
                   }}
                   title={
                     selected === row.offset
-                      ? "Copied offset shown in the toolbar"
-                      : "Select this row"
+                      ? t("Copied offset shown in the toolbar")
+                      : t("Select this row")
                   }
                 >
                   {row.offset.toString(16).padStart(8, "0")}
@@ -85,7 +87,7 @@ export function HexViewer({
                   const absolute = row.offset + index;
                   if (cell === "GAP") {
                     return (
-                      <span key={index} className="hex-byte hex-byte-gap" title="Bytes missing from the capture">
+                      <span key={index} className="hex-byte hex-byte-gap" title={t("Bytes missing from the capture")}>
                         GAP
                       </span>
                     );
@@ -99,7 +101,7 @@ export function HexViewer({
                         inHighlight(absolute) && "hex-byte-highlight",
                         gapped && "hex-byte-gap",
                       )}
-                      title={`offset ${absolute} (0x${cell})`}
+                      title={t("offset {offset} (0x{hex})", { offset: absolute, hex: cell })}
                     >
                       {cell}
                     </span>
@@ -128,6 +130,7 @@ export function HexComparison({
   }[];
   labels: string[];
 }) {
+  const { t } = useI18n();
   const [onlyDifferences, setOnlyDifferences] = useState(false);
   const visible = onlyDifferences ? rows.filter((row) => row.changed) : rows;
   const changedCount = rows.filter((row) => row.changed).length;
@@ -136,7 +139,7 @@ export function HexComparison({
     <div className="flex min-h-0 flex-col">
       <div className="flex items-center justify-between border-b border-line px-3 py-1.5">
         <span className="text-2xs text-text-muted">
-          {changedCount} of {rows.length} offsets differ
+          {t("{changed} of {total} offsets differ", { changed: changedCount, total: rows.length })}
         </span>
         <label className="flex items-center gap-1.5 text-2xs text-text-muted">
           <input
@@ -144,20 +147,20 @@ export function HexComparison({
             checked={onlyDifferences}
             onChange={(event) => setOnlyDifferences(event.target.checked)}
           />
-          only differing offsets
+          {t("only differing offsets")}
         </label>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="data-table">
           <thead>
             <tr>
-              <th>Offset</th>
+              <th>{t("Offset")}</th>
               {labels.map((label, index) => (
                 <th key={index} className="text-right">
                   {label}
                 </th>
               ))}
-              <th>State</th>
+              <th>{t("State")}</th>
             </tr>
           </thead>
           <tbody>
@@ -177,20 +180,22 @@ export function HexComparison({
                     )}
                     title={
                       value === null
-                        ? "absent: this message is shorter than this offset (not zero)"
+                        ? t("absent: this message is shorter than this offset (not zero)")
                         : undefined
                     }
                   >
-                    {value === null ? "— absent —" : `0x${value.toString(16).padStart(2, "0")}`}
+                    {value === null ? t("— absent —") : `0x${value.toString(16).padStart(2, "0")}`}
                   </td>
                 ))}
                 <td>
                   {row.changed ? (
                     <span className="text-status-warn">
-                      {row.present_count < row.values.length ? "differs / absent" : "differs"}
+                      {row.present_count < row.values.length
+                        ? t("differs / absent")
+                        : t("differs")}
                     </span>
                   ) : (
-                    <span className="text-text-faint">identical</span>
+                    <span className="text-text-faint">{t("identical")}</span>
                   )}
                 </td>
               </tr>

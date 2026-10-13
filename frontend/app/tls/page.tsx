@@ -16,6 +16,7 @@ import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import type { StatusTone } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 const CATEGORY_TONE: Record<string, StatusTone> = {
   browser: "ok",
@@ -35,6 +36,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 export default function TlsPage() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const captureId = workspace.captureId;
   const [nonBrowserOnly, setNonBrowserOnly] = useState(false);
 
@@ -54,11 +56,13 @@ export default function TlsPage() {
     return (
       <div className="p-4">
         <EmptyState
-          title="No capture selected"
-          description="TLS Analysis fingerprints the handshakes inside one capture. Pick a capture first; fingerprinting reads the plaintext handshake, so it works on encrypted sessions and needs no keys."
+          title={t("No capture selected")}
+          description={t(
+            "TLS Analysis fingerprints the handshakes inside one capture. Pick a capture first; fingerprinting reads the plaintext handshake, so it works on encrypted sessions and needs no keys.",
+          )}
           action={
             <Link href="/captures" className="btn btn-primary">
-              Go to Captures
+              {t("Go to Captures")}
             </Link>
           }
         />
@@ -69,11 +73,11 @@ export default function TlsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h1 className="text-sm font-semibold tracking-tight text-text">TLS Analysis</h1>
+        <h1 className="text-sm font-semibold tracking-tight text-text">{t("TLS Analysis")}</h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          JA3 and JA3S fingerprints of the handshakes in this capture, matched against a
-          small, locally maintained table. A match identifies a known client family — it is
-          not proof of the implementation language and never an indication of maliciousness.
+          {t(
+            "JA3 and JA3S fingerprints of the handshakes in this capture, matched against a small, locally maintained table. A match identifies a known client family — it is not proof of the implementation language and never an indication of maliciousness.",
+          )}
         </p>
       </div>
 
@@ -88,38 +92,48 @@ export default function TlsPage() {
           </Panel>
         ) : tls.data ? (
           <div className="flex flex-col gap-3">
-            <Panel title="Verdict">
+            <Panel title={t("Verdict")}>
               <div className="space-y-2 p-3">
                 <p className="text-xs text-text">{tls.data.verdict.statement}</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="info">
-                    client fingerprints: {tls.data.verdict.client_fingerprints}
+                    {t("client fingerprints: {count}", {
+                      count: tls.data.verdict.client_fingerprints,
+                    })}
                   </Badge>
                   <Badge tone={tls.data.verdict.non_browser_matches ? "info" : "neutral"}>
-                    non-browser matches: {tls.data.verdict.non_browser_matches}
+                    {t("non-browser matches: {count}", {
+                      count: tls.data.verdict.non_browser_matches,
+                    })}
                   </Badge>
                   <Badge tone={tls.data.unreliable_handshakes ? "warn" : "neutral"}>
-                    unreliable handshakes: {tls.data.unreliable_handshakes}
+                    {t("unreliable handshakes: {count}", {
+                      count: tls.data.unreliable_handshakes,
+                    })}
                   </Badge>
                   <Badge tone="neutral">
-                    streams scanned: {formatNumber(tls.data.streams_scanned)}/
-                    {formatNumber(tls.data.streams_total)}
+                    {t("streams scanned: {scanned}/{total}", {
+                      scanned: formatNumber(tls.data.streams_scanned),
+                      total: formatNumber(tls.data.streams_total),
+                    })}
                   </Badge>
                   {Object.entries(tls.data.categories).map(([category, count]) => (
                     <Badge key={category} tone={CATEGORY_TONE[category] ?? "unknown"}>
-                      {CATEGORY_LABEL[category] ?? category}: {count}
+                      {t("{label}: {count}", { label: t(CATEGORY_LABEL[category] ?? category), count })}
                     </Badge>
                   ))}
                 </div>
                 <Caveat>{tls.data.interpretation_note}</Caveat>
                 <p className="text-2xs text-text-faint">
-                  fingerprint database: {tls.data.fingerprint_database}
+                  {t("fingerprint database: {database}", {
+                    database: tls.data.fingerprint_database,
+                  })}
                 </p>
               </div>
             </Panel>
 
             <Panel
-              title="Fingerprints"
+              title={t("Fingerprints")}
               actions={
                 <label className="flex cursor-pointer items-center gap-1.5 text-2xs text-text-muted">
                   <input
@@ -127,30 +141,30 @@ export default function TlsPage() {
                     checked={nonBrowserOnly}
                     onChange={(event) => setNonBrowserOnly(event.target.checked)}
                   />
-                  only non-browser clients
+                  {t("only non-browser clients")}
                 </label>
               }
             >
               {fingerprints.length === 0 ? (
                 <EmptyState
-                  title="No fingerprints"
+                  title={t("No fingerprints")}
                   description={
                     tls.data.count === 0
-                      ? "No TLS handshake was found at the head of any stream. That means this capture has no TLS handshake, not that the traffic was not encrypted."
-                      : "No fingerprint matches the current filter."
+                      ? t("No TLS handshake was found at the head of any stream. That means this capture has no TLS handshake, not that the traffic was not encrypted.")
+                      : t("No fingerprint matches the current filter.")
                   }
                 />
               ) : (
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Kind</th>
-                      <th>Fingerprint</th>
-                      <th>Client family</th>
-                      <th>Class</th>
-                      <th>Confidence</th>
-                      <th>Seen</th>
-                      <th>SNI / ALPN</th>
+                      <th>{t("Kind")}</th>
+                      <th>{t("Fingerprint")}</th>
+                      <th>{t("Client family")}</th>
+                      <th>{t("Class")}</th>
+                      <th>{t("Confidence")}</th>
+                      <th>{t("Seen")}</th>
+                      <th>{t("SNI / ALPN")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -162,31 +176,37 @@ export default function TlsPage() {
                         <td className="font-mono text-2xs text-text">{item.md5}</td>
                         <td className="text-text">
                           {item.family ?? (
-                            <span className="text-text-faint">no local match</span>
+                            <span className="text-text-faint">{t("no local match")}</span>
                           )}
                           {item.source ? (
                             <span className="block text-2xs text-text-faint">
-                              source: {item.source}
+                              {t("source: {source}", { source: item.source })}
                             </span>
                           ) : null}
                         </td>
                         <td>
                           <Badge tone={CATEGORY_TONE[item.category] ?? "unknown"}>
-                            {CATEGORY_LABEL[item.category] ?? item.category}
+                            {t(CATEGORY_LABEL[item.category] ?? item.category)}
                           </Badge>
                         </td>
                         <td className="text-text-muted">{item.confidence}</td>
                         <td className="text-text-muted">
                           {item.occurrences}
                           <span className="block text-2xs text-text-faint">
-                            {item.stream_ids.length} stream(s)
+                            {t("{count} stream(s)", { count: item.stream_ids.length })}
                           </span>
                         </td>
                         <td className="font-mono text-2xs text-text-muted">
-                          {item.sni.length ? <div>sni: {item.sni.join(", ")}</div> : null}
-                          {item.alpn.length ? <div>alpn: {item.alpn.join(", ")}</div> : null}
+                          {item.sni.length ? (
+                            <div>{t("sni: {value}", { value: item.sni.join(", ") })}</div>
+                          ) : null}
+                          {item.alpn.length ? (
+                            <div>{t("alpn: {value}", { value: item.alpn.join(", ") })}</div>
+                          ) : null}
                           {item.versions.length ? (
-                            <div className="text-text-faint">tls: {item.versions.join(", ")}</div>
+                            <div className="text-text-faint">
+                              {t("tls: {value}", { value: item.versions.join(", ") })}
+                            </div>
                           ) : null}
                           {!item.sni.length && !item.alpn.length && !item.versions.length ? (
                             <span className="text-text-faint">—</span>
@@ -200,9 +220,9 @@ export default function TlsPage() {
             </Panel>
 
             <Caveat tone="warn">
-              A fingerprint names a client library or family, not a human or a piece of
-              malware. The same library produces the same hash for legitimate and abusive
-              traffic alike, so this table is a lead to investigate, never a verdict on its own.
+              {t(
+                "A fingerprint names a client library or family, not a human or a piece of malware. The same library produces the same hash for legitimate and abusive traffic alike, so this table is a lead to investigate, never a verdict on its own.",
+              )}
             </Caveat>
           </div>
         ) : null}

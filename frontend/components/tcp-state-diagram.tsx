@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 
+import { useI18n } from "@/lib/i18n";
+
 /**
  * A visual timeline of the TCP events the capture actually observed.
  *
@@ -98,6 +100,7 @@ export function TcpStateDiagram({
   onSelectPacket?: (packetIndex: number) => void;
   selectedPacket?: number | null;
 }) {
+  const { t } = useI18n();
   const model = useMemo(() => {
     const ordered = [...events].sort((a, b) => a.packet_index - b.packet_index);
     const usable = WIDTH - PAD_LEFT - PAD_RIGHT;
@@ -126,8 +129,9 @@ export function TcpStateDiagram({
   if (events.length === 0) {
     return (
       <p className="p-3 text-2xs text-text-faint">
-        No TCP packets were observed for this session, so there is no state
-        diagram to draw.
+        {t(
+          "No TCP packets were observed for this session, so there is no state diagram to draw.",
+        )}
       </p>
     );
   }
@@ -145,10 +149,10 @@ export function TcpStateDiagram({
       if (byPacket.has(packetIndex)) anomalyMarkers.push({ packetIndex, color, glyph, label });
     }
   };
-  push(anomalies?.retransmissions, C.retrans, "R", "retransmission");
-  push(anomalies?.duplicates, C.dup, "D", "exact duplicate");
-  push(anomalies?.out_of_order, C.ooo, "O", "out of order");
-  push(anomalies?.zero_windows, C.zero, "Z", "zero window");
+  push(anomalies?.retransmissions, C.retrans, "R", t("retransmission"));
+  push(anomalies?.duplicates, C.dup, "D", t("exact duplicate"));
+  push(anomalies?.out_of_order, C.ooo, "O", t("out of order"));
+  push(anomalies?.zero_windows, C.zero, "Z", t("zero window"));
 
   const phaseSegments = buildPhases(t0, t1, firstData?.event.timestamp, firstClose?.event.timestamp);
 
@@ -158,7 +162,7 @@ export function TcpStateDiagram({
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         width="100%"
         role="img"
-        aria-label="Observed TCP state timeline"
+        aria-label={t("Observed TCP state timeline")}
         className="min-w-[720px]"
       >
         {/* Lane guides. */}
@@ -171,9 +175,18 @@ export function TcpStateDiagram({
         {placed.map(({ event, kind, x, y }) => {
           const radius = kind === "data" ? Math.min(7, 3 + event.payload_length / 120) : 3.6;
           const selected = selectedPacket != null && selectedPacket === event.packet_index;
-          const title = `#${event.packet_index} ${fmtTime(event.timestamp)} ${event.flags_text} ` +
-            `seq=${event.sequence ?? "-"} ack=${event.acknowledgment ?? "-"} ` +
-            `win=${event.window ?? "-"} payload=${event.payload_length}`;
+          const title = t(
+            "#{index} {time} {flags} seq={seq} ack={ack} win={win} payload={payload}",
+            {
+              index: event.packet_index,
+              time: fmtTime(event.timestamp),
+              flags: event.flags_text,
+              seq: event.sequence ?? "-",
+              ack: event.acknowledgment ?? "-",
+              win: event.window ?? "-",
+              payload: event.payload_length,
+            },
+          );
           return (
             <g
               key={event.packet_index}
@@ -212,7 +225,7 @@ export function TcpStateDiagram({
           const gy = above ? point.y - 15 : point.y + 15;
           return (
             <g key={`${marker.glyph}-${marker.packetIndex}-${index}`}>
-              <title>{`Packet #${marker.packetIndex}: ${marker.label}`}</title>
+              <title>{t("Packet #{index}: {reason}", { index: marker.packetIndex, reason: marker.label })}</title>
               <rect
                 x={point.x - 5}
                 y={gy - 5}
@@ -244,7 +257,7 @@ export function TcpStateDiagram({
           fontSize={9}
           textAnchor="middle"
         >
-          time (s, capture order left → right)
+          {t("time (s, capture order left → right)")}
         </text>
 
         {/* Phase strip. */}
@@ -267,7 +280,7 @@ export function TcpStateDiagram({
                   fontSize={9}
                   textAnchor="middle"
                 >
-                  {segment.label}
+                  {t(segment.label)}
                 </text>
               )}
             </g>
@@ -279,21 +292,21 @@ export function TcpStateDiagram({
         {(Object.keys(KIND_LABEL) as Kind[]).map((kind) => (
           <span key={kind} className="inline-flex items-center gap-1">
             <span className="inline-block h-2 w-2 rounded-full" style={{ background: KIND_COLOR[kind] }} />
-            {KIND_LABEL[kind]}
+            {t(KIND_LABEL[kind])}
           </span>
         ))}
         <span className="text-text-faint">·</span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-flex h-3 w-3 items-center justify-center rounded-sm text-[7px]" style={{ background: C.retrans, color: "#0b0d10" }}>R</span>
-          retransmission
+          {t("retransmission")}
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-flex h-3 w-3 items-center justify-center rounded-sm text-[7px]" style={{ background: C.ooo, color: "#0b0d10" }}>O</span>
-          out of order
+          {t("out of order")}
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-flex h-3 w-3 items-center justify-center rounded-sm text-[7px]" style={{ background: C.zero, color: "#0b0d10" }}>Z</span>
-          zero window
+          {t("zero window")}
         </span>
       </div>
     </div>

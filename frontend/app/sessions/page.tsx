@@ -21,6 +21,7 @@ import {
   formatTimestamp,
   roleTone,
 } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 type TimelineEvent = {
   packet_index: number;
@@ -39,6 +40,7 @@ type TimelineEvent = {
 
 export default function SessionsPage() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
 
   const captureId = workspace.captureId;
   const [selected, setSelected] = useState<string | null>(workspace.sessionId);
@@ -83,8 +85,8 @@ export default function SessionsPage() {
     return (
       <div className="p-4">
         <EmptyState
-          title="No capture selected"
-          description="Pick a capture on the Captures page first; TCP sessions are derived from it."
+          title={t("No capture selected")}
+          description={t("Pick a capture on the Captures page first; TCP sessions are derived from it.")}
         />
       </div>
     );
@@ -96,23 +98,24 @@ export default function SessionsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h1 className="text-sm font-semibold tracking-tight text-text">TCP Sessions</h1>
+        <h1 className="text-sm font-semibold tracking-tight text-text">{t("TCP Sessions")}</h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          A 4-tuple is not a session. Port reuse and a new SYN split the flow; the
-          splitting policy is recorded on every session so a result can be explained later.
+          {t(
+            "A 4-tuple is not a session. Port reuse and a new SYN split the flow; the splitting policy is recorded on every session so a result can be explained later.",
+          )}
         </p>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-[320px_1fr]">
-        <Panel title="Sessions">
+        <Panel title={t("Sessions")}>
           {sessions.state === "error" ? (
             <ErrorState message={sessions.error ?? ""} onRetry={sessions.reload} />
           ) : sessions.state === "loading" ? (
             <Skeleton rows={8} />
           ) : !sessions.data || sessions.data.items.length === 0 ? (
             <EmptyState
-              title="No TCP sessions"
-              description="This capture has not been analysed, or contains no TCP traffic."
+              title={t("No TCP sessions")}
+              description={t("This capture has not been analysed, or contains no TCP traffic.")}
             />
           ) : (
             <ul>
@@ -167,17 +170,19 @@ export default function SessionsPage() {
           {!selected ? (
             <Panel>
               <EmptyState
-                title="Select a session"
-                description="The timeline shows only what the capture observed. It is not a reconstruction of either TCP stack."
+                title={t("Select a session")}
+                description={t(
+                  "The timeline shows only what the capture observed. It is not a reconstruction of either TCP stack.",
+                )}
               />
             </Panel>
           ) : (
             <>
               <Panel
-                title="Observed state diagram"
+                title={t("Observed state diagram")}
                 actions={
                   <span className="text-2xs text-text-faint">
-                    R retransmission · O out of order · Z zero window
+                    {t("R retransmission · O out of order · Z zero window")}
                   </span>
                 }
               >
@@ -187,17 +192,17 @@ export default function SessionsPage() {
               </Panel>
 
               <Panel
-                title="Connection state (observed)"
+                title={t("Connection state (observed)")}
                 actions={
                   <div className="flex gap-1">
                     <Badge tone={summary.saw_syn ? "ok" : "unknown"}>
-                      SYN {summary.saw_syn ? "seen" : "not seen"}
+                      {t("SYN {state}", { state: summary.saw_syn ? t("seen") : t("not seen") })}
                     </Badge>
                     <Badge tone={summary.saw_fin ? "ok" : "unknown"}>
-                      FIN {summary.saw_fin ? "seen" : "not seen"}
+                      {t("FIN {state}", { state: summary.saw_fin ? t("seen") : t("not seen") })}
                     </Badge>
                     <Badge tone={summary.saw_rst ? "bad" : "unknown"}>
-                      RST {summary.saw_rst ? "seen" : "not seen"}
+                      {t("RST {state}", { state: summary.saw_rst ? t("seen") : t("not seen") })}
                     </Badge>
                   </div>
                 }
@@ -217,15 +222,15 @@ export default function SessionsPage() {
                       <thead>
                         <tr>
                           <th>#</th>
-                          <th>Time</th>
-                          <th>Dir</th>
-                          <th>Source</th>
-                          <th>Flags</th>
-                          <th>Seq</th>
-                          <th>Ack</th>
-                          <th>Win</th>
-                          <th>Payload</th>
-                          <th>Options</th>
+                          <th>{t("Time")}</th>
+                          <th>{t("Dir")}</th>
+                          <th>{t("Source")}</th>
+                          <th>{t("Flags")}</th>
+                          <th>{t("Seq")}</th>
+                          <th>{t("Ack")}</th>
+                          <th>{t("Win")}</th>
+                          <th>{t("Payload")}</th>
+                          <th>{t("Options")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -269,13 +274,13 @@ export default function SessionsPage() {
                 </div>
               </Panel>
 
-              <Panel title="Reconstruction diagnostics">
+              <Panel title={t("Reconstruction diagnostics")}>
                 {diagnostics.state === "loading" ? (
                   <Skeleton rows={6} />
                 ) : diagnostics.data ? (
                   <DiagnosticsView data={diagnostics.data as Record<string, unknown>} />
                 ) : (
-                  <EmptyState title="No diagnostics" />
+                  <EmptyState title={t("No diagnostics")} />
                 )}
               </Panel>
             </>
@@ -287,6 +292,7 @@ export default function SessionsPage() {
 }
 
 function DiagnosticsView({ data }: { data: Record<string, unknown> }) {
+  const { t } = useI18n();
   const explanations = (data.explanations ?? {}) as Record<string, string>;
   const streams = (data.streams ?? []) as Record<string, unknown>[];
 
@@ -294,7 +300,7 @@ function DiagnosticsView({ data }: { data: Record<string, unknown> }) {
     <div className="space-y-3 p-3">
       {streams.length === 0 && (
         <p className="text-2xs text-text-faint">
-          No stream payload was observed for this session.
+          {t("No stream payload was observed for this session.")}
         </p>
       )}
       {streams.map((stream) => {
@@ -311,23 +317,27 @@ function DiagnosticsView({ data }: { data: Record<string, unknown> }) {
             <div className="mb-2 flex items-center justify-between">
               <span className="font-mono text-2xs text-accent">{direction}</span>
               <span className="text-2xs text-text-faint">
-                conflict policy: {String(stream.conflict_policy ?? "-")}
+                {t("conflict policy: {policy}", { policy: String(stream.conflict_policy ?? "-") })}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
-              <Count label="retransmissions" value={retransmissions.length} note={explanations.retransmission} />
-              <Count label="exact duplicates" value={duplicates.length} note={explanations.retransmission} />
-              <Count label="out of order" value={outOfOrder.length} note={explanations.out_of_order} />
-              <Count label="holes" value={holes.length} note={explanations.hole} tone={holes.length ? "warn" : undefined} />
-              <Count label="byte conflicts" value={conflicts.length} note={explanations.conflict} tone={conflicts.length ? "bad" : undefined} />
-              <Count label="zero window" value={zeroWindows.length} note={explanations.zero_window} />
+              <Count label={t("retransmissions")} value={retransmissions.length} note={explanations.retransmission} />
+              <Count label={t("exact duplicates")} value={duplicates.length} note={explanations.retransmission} />
+              <Count label={t("out of order")} value={outOfOrder.length} note={explanations.out_of_order} />
+              <Count label={t("holes")} value={holes.length} note={explanations.hole} tone={holes.length ? "warn" : undefined} />
+              <Count label={t("byte conflicts")} value={conflicts.length} note={explanations.conflict} tone={conflicts.length ? "bad" : undefined} />
+              <Count label={t("zero window")} value={zeroWindows.length} note={explanations.zero_window} />
             </div>
 
             {holes.length > 0 && (
               <ul className="mt-2 space-y-0.5 font-mono text-2xs text-status-warn">
                 {holes.slice(0, 8).map((hole, index) => (
                   <li key={index}>
-                    gap {hole.start}..{hole.end} ({hole.reason})
+                    {t("gap {start}..{end} ({reason})", {
+                      start: hole.start,
+                      end: hole.end,
+                      reason: hole.reason,
+                    })}
                   </li>
                 ))}
               </ul>
@@ -337,9 +347,13 @@ function DiagnosticsView({ data }: { data: Record<string, unknown> }) {
               <ul className="mt-2 space-y-1 border-t border-line pt-2">
                 {conflicts.slice(0, 4).map((conflict, index) => (
                   <li key={index} className="font-mono text-2xs text-status-bad">
-                    offsets {String(conflict.start_offset)}..{String(conflict.end_offset)}: kept{" "}
-                    {String(conflict.kept_hex)} / rejected {String(conflict.rejected_hex)} (
-                    {String(conflict.resolution)})
+                    {t("offsets {start}..{end}: kept {kept} / rejected {rejected} ({resolution})", {
+                      start: String(conflict.start_offset),
+                      end: String(conflict.end_offset),
+                      kept: String(conflict.kept_hex),
+                      rejected: String(conflict.rejected_hex),
+                      resolution: String(conflict.resolution),
+                    })}
                   </li>
                 ))}
               </ul>
@@ -350,7 +364,7 @@ function DiagnosticsView({ data }: { data: Record<string, unknown> }) {
 
       <details className="rounded-sm border border-line p-2">
         <summary className="cursor-pointer text-2xs text-text-muted">
-          What these labels mean
+          {t("What these labels mean")}
         </summary>
         <dl className="mt-2 space-y-1.5">
           {Object.entries(explanations).map(([key, text]) => (

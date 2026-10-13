@@ -9,10 +9,12 @@ import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { cn, formatBytes, formatTimestamp } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 export default function CapturesPage() {
   const workspace = useWorkspace();
   const params = useSearchParams();
+  const { t } = useI18n();
   const projectId = params.get("project") ?? workspace.projectId;
   const [busy, setBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -73,8 +75,8 @@ export default function CapturesPage() {
     return (
       <div className="p-4">
         <EmptyState
-          title="No project selected"
-          description="Open a project on the Overview page first."
+          title={t("No project selected")}
+          description={t("Open a project on the Overview page first.")}
         />
       </div>
     );
@@ -90,15 +92,16 @@ export default function CapturesPage() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-4 py-3">
         <div>
-          <h1 className="text-sm font-semibold tracking-tight text-text">Captures</h1>
+          <h1 className="text-sm font-semibold tracking-tight text-text">{t("Captures")}</h1>
           <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-            Imported files are immutable. Analysis reads them and writes derived artefacts
-            alongside; the original bytes are never rewritten.
+            {t(
+              "Imported files are immutable. Analysis reads them and writes derived artefacts alongside; the original bytes are never rewritten.",
+            )}
           </p>
         </div>
         <label className="btn btn-primary cursor-pointer">
           <Upload className="h-3 w-3" aria-hidden />
-          {busy ? "Importing…" : "Import PCAP"}
+          {busy ? t("Importing…") : t("Import PCAP")}
           <input
             type="file"
             accept=".pcap,.pcapng,.cap"
@@ -121,29 +124,31 @@ export default function CapturesPage() {
 
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-1">
-            <Panel title="Project totals">
+            <Panel title={t("Project totals")}>
               {metrics.state === "loading" ? (
                 <Skeleton rows={5} />
               ) : metrics.data ? (
                 <dl className="space-y-1 p-3 font-mono text-2xs">
-                  <Line label="captures" value={metrics.data.captures} />
-                  <Line label="packets" value={metrics.data.packets} />
-                  <Line label="tcp sessions" value={metrics.data.tcp_sessions} />
-                  <Line label="messages" value={metrics.data.messages} />
-                  <Line label="bytes stored" value={formatBytes(metrics.data.bytes_stored)} />
+                  <Line label={t("captures")} value={metrics.data.captures} />
+                  <Line label={t("packets")} value={metrics.data.packets} />
+                  <Line label={t("tcp sessions")} value={metrics.data.tcp_sessions} />
+                  <Line label={t("messages")} value={metrics.data.messages} />
+                  <Line label={t("bytes stored")} value={formatBytes(metrics.data.bytes_stored)} />
                 </dl>
               ) : null}
             </Panel>
 
-            <Panel title="Captures in this project">
+            <Panel title={t("Captures in this project")}>
               {listed.state === "loading" ? (
                 <Skeleton rows={3} />
               ) : listed.state === "error" ? (
                 <ErrorState message={listed.error ?? ""} onRetry={listed.reload} />
               ) : (listed.data ?? []).length === 0 ? (
                 <EmptyState
-                  title="No captures yet"
-                  description="Import a PCAP or PCAPNG file to begin. The original bytes are stored immutably and hashed."
+                  title={t("No captures yet")}
+                  description={t(
+                    "Import a PCAP or PCAPNG file to begin. The original bytes are stored immutably and hashed.",
+                  )}
                 />
               ) : (
                 <ul className="divide-y divide-line/60">
@@ -187,23 +192,23 @@ export default function CapturesPage() {
               )}
             </Panel>
 
-            <Panel title="Selected capture">
+            <Panel title={t("Selected capture")}>
               {!workspace.captureId ? (
-                <EmptyState title="No capture selected" description="Import a file to begin." />
+                <EmptyState title={t("No capture selected")} description={t("Import a file to begin.")} />
               ) : capture.state === "loading" ? (
                 <Skeleton rows={6} />
               ) : capture.data ? (
                 <div className="space-y-2 p-3">
                   <dl className="space-y-1 font-mono text-2xs">
-                    <Line label="name" value={capture.data.name} />
-                    <Line label="format" value={capture.data.format} />
-                    <Line label="size" value={formatBytes(capture.data.file_size)} />
-                    <Line label="sha256" value={`${capture.data.sha256.slice(0, 24)}…`} />
+                    <Line label={t("name")} value={capture.data.name} />
+                    <Line label={t("format")} value={capture.data.format} />
+                    <Line label={t("size")} value={formatBytes(capture.data.file_size)} />
+                    <Line label={t("sha256")} value={`${capture.data.sha256.slice(0, 24)}…`} />
                     <Line
-                      label="imported"
+                      label={t("imported")}
                       value={formatTimestamp(Date.parse(capture.data.imported_at) / 1000)}
                     />
-                    <Line label="status" value={capture.data.analysis_status} />
+                    <Line label={t("status")} value={capture.data.analysis_status} />
                   </dl>
                   <div className="flex flex-wrap gap-2 pt-1">
                     <button
@@ -213,14 +218,14 @@ export default function CapturesPage() {
                       onClick={() =>
                         void analyze.run(
                           () => api.analyze(capture.data!.id, {}),
-                          "Analysis finished.",
+                          t("Analysis finished."),
                         ).then((result) => {
                           if (result) workspace.invalidate();
                         })
                       }
                     >
                       <Play className="h-3 w-3" aria-hidden />
-                      {analyze.pending ? "Analysing…" : "Run analysis"}
+                      {analyze.pending ? t("Analysing…") : t("Run analysis")}
                     </button>
                     <button
                       type="button"
@@ -228,13 +233,13 @@ export default function CapturesPage() {
                       disabled={analyze.pending}
                       onClick={() =>
                         void analyze
-                          .run(() => api.analyzeAsync(capture.data!.id), "Queued as a background job.")
+                          .run(() => api.analyzeAsync(capture.data!.id), t("Queued as a background job."))
                           .then((result) => {
                             if (result) workspace.invalidate();
                           })
                       }
                     >
-                      Queue in background
+                      {t("Queue in background")}
                     </button>
                     <button
                       type="button"
@@ -243,14 +248,17 @@ export default function CapturesPage() {
                       onClick={() => {
                         if (
                           !window.confirm(
-                            `Delete "${capture.data!.name}" and everything derived from it?\n\n` +
-                              "This cannot be undone.",
+                            t('Delete "{name}" and everything derived from it?', {
+                              name: capture.data!.name,
+                            }) +
+                              "\n\n" +
+                              t("This cannot be undone."),
                           )
                         ) {
                           return;
                         }
                         void remove
-                          .run(() => api.deleteCapture(capture.data!.id), "Capture deleted.")
+                          .run(() => api.deleteCapture(capture.data!.id), t("Capture deleted."))
                           .then((ok) => {
                             if (ok) {
                               workspace.selectCapture(null);
@@ -260,7 +268,7 @@ export default function CapturesPage() {
                       }}
                     >
                       <Trash2 className="h-3 w-3" aria-hidden />
-                      Delete
+                      {t("Delete")}
                     </button>
                   </div>
                   {analyze.notice && (
@@ -275,20 +283,22 @@ export default function CapturesPage() {
           </div>
 
           <div className="space-y-4 lg:col-span-2">
-            <Panel title="Analysis result">
+            <Panel title={t("Analysis result")}>
               {Object.keys(stats).length === 0 ? (
                 <EmptyState
-                  title="Not analysed yet"
-                  description="Run the analysis to index packets, split TCP sessions and reconstruct the byte streams."
+                  title={t("Not analysed yet")}
+                  description={t(
+                    "Run the analysis to index packets, split TCP sessions and reconstruct the byte streams.",
+                  )}
                 />
               ) : (
                 <div className="space-y-3 p-3">
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <Stat label="sessions" value={String(stats.sessions ?? 0)} />
-                    <Stat label="streams" value={String(stats.streams ?? 0)} />
-                    <Stat label="messages" value={String(stats.messages ?? 0)} />
+                    <Stat label={t("sessions")} value={String(stats.sessions ?? 0)} />
+                    <Stat label={t("streams")} value={String(stats.streams ?? 0)} />
+                    <Stat label={t("messages")} value={String(stats.messages ?? 0)} />
                     <Stat
-                      label="sessions with problems"
+                      label={t("sessions with problems")}
                       value={String(stats.sessions_with_problems ?? 0)}
                       tone={Number(stats.sessions_with_problems ?? 0) > 0 ? "warn" : "ok"}
                     />
@@ -296,7 +306,7 @@ export default function CapturesPage() {
 
                   <div>
                     <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
-                      Reader diagnostics
+                      {t("Reader diagnostics")}
                     </p>
                     {readerDiagnostics.errors?.length ? (
                       <ul className="space-y-1">
@@ -307,7 +317,7 @@ export default function CapturesPage() {
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-2xs text-status-ok">No read errors.</p>
+                      <p className="text-2xs text-status-ok">{t("No read errors.")}</p>
                     )}
                     {readerDiagnostics.warnings?.map((warning, index) => (
                       <p key={index} className="mt-1 font-mono text-2xs text-status-warn">
@@ -319,7 +329,7 @@ export default function CapturesPage() {
                   {stats.options ? (
                     <div>
                       <p className="mb-1 text-2xs uppercase tracking-wider text-text-faint">
-                        Analysis options (recorded for reproducibility)
+                        {t("Analysis options (recorded for reproducibility)")}
                       </p>
                       <pre className="overflow-x-auto rounded-sm border border-line bg-surface-sunken p-2 font-mono text-2xs">
                         {JSON.stringify(stats.options, null, 2)}
@@ -328,29 +338,29 @@ export default function CapturesPage() {
                   ) : null}
 
                   <Caveat>
-                    These counts come from the options recorded above. Re-running with a
-                    different framing rule or conflict policy produces a different set of
-                    rows from the same bytes.
+                    {t(
+                      "These counts come from the options recorded above. Re-running with a different framing rule or conflict policy produces a different set of rows from the same bytes.",
+                    )}
                   </Caveat>
                 </div>
               )}
             </Panel>
 
-            <Panel title="TCP sessions in this capture">
+            <Panel title={t("TCP sessions in this capture")}>
               {sessions.state === "error" ? (
                 <ErrorState message={sessions.error ?? ""} onRetry={sessions.reload} />
               ) : !workspace.captureId ? (
-                <EmptyState title="No capture selected" />
+                <EmptyState title={t("No capture selected")} />
               ) : sessions.state === "loading" ? (
                 <Skeleton rows={5} />
               ) : sessions.data && sessions.data.items.length > 0 ? (
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Identity</th>
-                      <th>Endpoints</th>
-                      <th>Completeness</th>
-                      <th>Role basis</th>
+                      <th>{t("Identity")}</th>
+                      <th>{t("Endpoints")}</th>
+                      <th>{t("Completeness")}</th>
+                      <th>{t("Role basis")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -386,8 +396,8 @@ export default function CapturesPage() {
                 </table>
               ) : (
                 <EmptyState
-                  title="No sessions"
-                  description="This capture contains no TCP conversations."
+                  title={t("No sessions")}
+                  description={t("This capture contains no TCP conversations.")}
                 />
               )}
             </Panel>

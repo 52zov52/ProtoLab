@@ -14,15 +14,19 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { useAction, useAsync } from "@/hooks/use-async";
+import { useProtocolFilter } from "@/hooks/use-protocol-filter";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { cn, formatNumber } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 const WINDOW = 512;
 
 export default function StreamsPage() {
   const workspace = useWorkspace();
   const params = useSearchParams();
+  const { t } = useI18n();
+  const protocolFilter = useProtocolFilter();
   const sessionId = params.get("session") ?? workspace.sessionId;
   const [streamId, setStreamId] = useState<string | null>(workspace.streamId);
   const [offset, setOffset] = useState(0);
@@ -68,14 +72,28 @@ export default function StreamsPage() {
 
   const apply = useAction();
 
+  // Protocol labels present in this session, and the ones the analyst chose to
+  // hide. Hiding removes the stream from the selector; it never deletes data.
+  const protocolLabels = useMemo(() => {
+    const names = new Set<string>();
+    for (const item of streams.data ?? []) names.add(item.protocol_label);
+    return [...names].sort();
+  }, [streams.data]);
+
+  const visibleStreams = useMemo(
+    () => (streams.data ?? []).filter((s) => !protocolFilter.isHidden(s.protocol_label)),
+    [streams.data, protocolFilter],
+  );
+
   useEffect(() => {
-    if (streams.data && streams.data.length > 0 && !streamId) {
-      const first = streams.data[0];
+    if (visibleStreams.length === 0) return;
+    if (!visibleStreams.some((s) => s.id === streamId)) {
+      const first = visibleStreams[0];
       setStreamId(first.id);
       workspace.selectStream(first.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streams.data]);
+  }, [visibleStreams, streamId]);
 
   const stream = streams.data?.find((s) => s.id === streamId) ?? null;
   const holes = useMemo(
@@ -87,10 +105,11 @@ export default function StreamsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h1 className="text-sm font-semibold tracking-tight text-text">Stream Explorer</h1>
+        <h1 className="text-sm font-semibold tracking-tight text-text">{t("Stream Explorer")}</h1>
         <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-          The reconstructed byte stream, its coverage map and the packets that produced
-          each byte. Missing ranges are shown as gaps and are never filled with zeros.
+          {t(
+            "The reconstructed byte stream, its coverage map and the packets that produced each byte. Missing ranges are shown as gaps and are never filled with zeros.",
+          )}
         </p>
       </div>
 
@@ -98,71 +117,115 @@ export default function StreamsPage() {
         {sessionId ? null : (
           <div className="p-4">
             <EmptyState
-              title="No TCP session selected"
-              description="The Stream Explorer works on one reconstructed direction of one TCP session. Open TCP Sessions to choose the connection, or import and analyse a capture first."
+              title={t("No TCP session selected")}
+              description={t(
+                "The Stream Explorer works on one reconstructed direction of one TCP session. Open TCP Sessions to choose the connection, or import and analyse a capture first.",
+              )}
               action={
                 <Link href="/sessions" className="btn btn-primary">
-                  Go to TCP Sessions
+                  {t("Go to TCP Sessions")}
                 </Link>
               }
             />
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-1.5">
-          {(streams.data ?? []).map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => {
-                setStreamId(s.id);
-                setOffset(0);
-                workspace.selectStream(s.id);
-              }}
-              className={cn(
-                "btn",
-                s.id === streamId && "btn-primary",
-              )}
-            >
-              {s.direction} · {s.local_endpoint} → {s.remote_endpoint}
-              <span className="text-text-faint">
-                {formatNumber(s.present_bytes)}/{formatNumber(s.stream_length)} B
+        <div className="border-b border-line bg-surface px-3 py-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {protocolLabels.map((label) => {
+              const hidden = protocolFilter.isHidden(label);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => protocolFilter.toggle(label)}
+                  aria-pressed={!hidden}
+                  title={hidden ? t("Show this protocol") : t("Hide this protocol")}
+                  className={cn(
+                    "tag",
+                    hidden
+                      ? "border-line text-text-faint line-through opacity-60"
+                      : "border-line-strong text-text-muted hover:border-accent-dim hover:text-text",
+                  )}
+                >
+                  <span className="font-mono">{label}</span>
+                </button>
+              );
+            })}
+            {protocolLabels.length > 0 && (
+              <span className="text-2xs uppercase tracking-wider text-text-faint">
+                {t("Protocols")}
               </span>
-            </button>
-          ))}
-          {stream && (
-            <Badge tone={stream.protocol_label === "unknown_binary" ? "unknown" : "info"}>
-              protocol: {stream.protocol_label} ({stream.protocol_confidence.toFixed(2)})
-            </Badge>
-          )}
-          <span className="ml-auto flex items-center gap-1">
-            <button type="button" className="btn" onClick={() => setOffset(Math.max(0, offset - WINDOW))}>
-              ← prev
-            </button>
-            <span className="font-mono text-2xs text-text-muted">
-              offset {formatNumber(offset)} … {formatNumber(offset + WINDOW)}
+            )}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {visibleStreams.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  setStreamId(s.id);
+                  setOffset(0);
+                  workspace.selectStream(s.id);
+                }}
+                className={cn("btn", s.id === streamId && "btn-primary")}
+              >
+                {s.direction} · {s.local_endpoint} → {s.remote_endpoint}
+                <span className="text-text-faint">
+                  {t("{present}/{total} B", {
+                    present: formatNumber(s.present_bytes),
+                    total: formatNumber(s.stream_length),
+                  })}
+                </span>
+              </button>
+            ))}
+            {streams.data && visibleStreams.length === 0 && (
+              <span className="text-2xs text-text-faint">
+                {t("All streams are hidden by the protocol filter.")}
+              </span>
+            )}
+            {stream && (
+              <Badge tone={stream.protocol_label === "unknown_binary" ? "unknown" : "info"}>
+                {t("protocol: {label} ({confidence})", {
+                  label: stream.protocol_label,
+                  confidence: stream.protocol_confidence.toFixed(2),
+                })}
+              </Badge>
+            )}
+            <span className="ml-auto flex items-center gap-1">
+              <button type="button" className="btn" onClick={() => setOffset(Math.max(0, offset - WINDOW))}>
+                {t("← prev")}
+              </button>
+              <span className="font-mono text-2xs text-text-muted">
+                {t("offset {start} … {end}", {
+                  start: formatNumber(offset),
+                  end: formatNumber(offset + WINDOW),
+                })}
+              </span>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setOffset(offset + WINDOW)}
+                disabled={stream ? offset + WINDOW >= stream.stream_length : true}
+              >
+                {t("next →")}
+              </button>
             </span>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setOffset(offset + WINDOW)}
-              disabled={stream ? offset + WINDOW >= stream.stream_length : true}
-            >
-              next →
-            </button>
-          </span>
+          </div>
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto p-3 lg:grid-cols-[1fr_360px]">
           <div className="flex min-h-0 flex-col gap-3">
             <Panel
-              title="Reconstructed bytes"
+              title={t("Reconstructed bytes")}
               actions={
                 selectedMessage ? (
                   <Badge tone="info">
-                    highlighting message {selectedMessage.label}
+                    {t("highlighting message {label}", { label: selectedMessage.label })}
                   </Badge>
                 ) : (
-                  <span className="text-2xs text-text-faint">select a message below</span>
+                  <span className="text-2xs text-text-faint">
+                    {t("select a message below")}
+                  </span>
                 )
               }
             >
@@ -181,24 +244,29 @@ export default function StreamsPage() {
                   }
                 />
               ) : (
-                <EmptyState title="No stream selected" />
+                <EmptyState title={t("No stream selected")} />
               )}
             </Panel>
 
             {holes.length > 0 && (
-              <Panel title="Coverage gaps">
+              <Panel title={t("Coverage gaps")}>
                 <div className="space-y-1.5 p-3">
                   {holes.map((hole, index) => (
                     <div key={index} className="flex items-center justify-between font-mono text-2xs">
                       <span className="text-status-warn">
-                        {hole.start} … {hole.end} ({hole.length} bytes)
+                        {t("{start} … {end} ({length} bytes)", {
+                          start: hole.start,
+                          end: hole.end,
+                          length: hole.length,
+                        })}
                       </span>
                       <span className="text-text-faint">{hole.reason}</span>
                     </div>
                   ))}
                   <Caveat tone="warn">
-                    These bytes were never captured. They are not recoverable from this
-                    file, and nothing in the analysis substitutes a guess for them.
+                    {t(
+                      "These bytes were never captured. They are not recoverable from this file, and nothing in the analysis substitutes a guess for them.",
+                    )}
                   </Caveat>
                 </div>
               </Panel>
@@ -206,7 +274,7 @@ export default function StreamsPage() {
 
             {tls.state === "ready" &&
               ((tls.data?.handshakes ?? []) as Record<string, unknown>[]).length > 0 && (
-                <Panel title="TLS fingerprints (JA3 / JA3S)">
+                <Panel title={t("TLS fingerprints (JA3 / JA3S)")}>
                   <div className="space-y-2 p-3">
                     {(
                       (tls.data?.handshakes ?? []) as Record<string, unknown>[]
@@ -219,10 +287,10 @@ export default function StreamsPage() {
                           <Badge tone="info">{String(handshake.kind)}</Badge>
                           {/* A truncated handshake is reported as such and never hashed. */}
                           <Badge tone={handshake.reliable ? "ok" : "warn"}>
-                            {handshake.reliable ? "reliable" : "unreliable"}
+                            {handshake.reliable ? t("reliable") : t("unreliable")}
                           </Badge>
                           <span className="text-text">
-                            {String(handshake.md5 ?? "no hash computed")}
+                            {String(handshake.md5 ?? t("no hash computed"))}
                           </span>
                           <span className="text-text-faint">
                             {String(handshake.version ?? "")}
@@ -232,17 +300,24 @@ export default function StreamsPage() {
                           {String(handshake.raw ?? "")}
                         </div>
                         <div className="flex flex-wrap gap-3 text-text-faint">
-                          {handshake.sni ? <span>sni: {String(handshake.sni)}</span> : null}
+                          {handshake.sni ? (
+                            <span>{t("sni: {value}", { value: String(handshake.sni) })}</span>
+                          ) : null}
                           {Array.isArray(handshake.alpn) && handshake.alpn.length ? (
-                            <span>alpn: {handshake.alpn.join(", ")}</span>
+                            <span>
+                              {t("alpn: {value}", {
+                                value: (handshake.alpn as string[]).join(", "),
+                              })}
+                            </span>
                           ) : null}
                           {Array.isArray(handshake.supported_groups) &&
                           handshake.supported_groups.length ? (
                             <span>
-                              groups:{" "}
-                              {(handshake.supported_groups as number[])
-                                .map((g) => `0x${g.toString(16)}`)
-                                .join(", ")}
+                              {t("groups: {value}", {
+                                value: (handshake.supported_groups as number[])
+                                  .map((g) => `0x${g.toString(16)}`)
+                                  .join(", "),
+                              })}
                             </span>
                           ) : null}
                         </div>
@@ -265,7 +340,7 @@ export default function StreamsPage() {
                 </Panel>
               )}
 
-            <Panel title="Framing candidates for this stream">
+            <Panel title={t("Framing candidates for this stream")}>
               {suggestions.state === "loading" ? (
                 <Skeleton rows={4} />
               ) : suggestions.data ? (
@@ -276,7 +351,7 @@ export default function StreamsPage() {
                       className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-raised px-2.5 py-1.5"
                     >
                       <Badge tone={index === 0 ? "ok" : "neutral"}>
-                        score {s.score.toFixed(3)}
+                        {t("score {value}", { value: s.score.toFixed(3) })}
                       </Badge>
                       <span className="font-mono text-2xs text-text">
                         {s.method} {JSON.stringify(s.config)}
@@ -296,12 +371,12 @@ export default function StreamsPage() {
                                   api.analyze(workspace.captureId as string, {
                                     framing: { method: s.method, config: s.config },
                                   }),
-                                "Framing rule applied; messages regenerated.",
+                                t("Framing rule applied; messages regenerated."),
                               )
                               .then(() => workspace.invalidate())
                           }
                         >
-                          Apply and re-frame
+                          {t("Apply and re-frame")}
                         </button>
                       )}
                     </div>
@@ -309,13 +384,13 @@ export default function StreamsPage() {
                   <Caveat>{suggestions.data.disclaimer}</Caveat>
                 </div>
               ) : (
-                <EmptyState title="No candidates" />
+                <EmptyState title={t("No candidates")} />
               )}
             </Panel>
           </div>
 
           <div className="flex min-h-0 flex-col gap-3">
-            <Panel title="Framed messages">
+            <Panel title={t("Framed messages")}>
               {messages.state === "loading" ? (
                 <Skeleton rows={10} />
               ) : messages.data && messages.data.items.length > 0 ? (
@@ -323,10 +398,10 @@ export default function StreamsPage() {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Range</th>
-                      <th>Len</th>
-                      <th>Declared</th>
-                      <th>State</th>
+                      <th>{t("Range")}</th>
+                      <th>{t("Len")}</th>
+                      <th>{t("Declared")}</th>
+                      <th>{t("State")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -365,7 +440,7 @@ export default function StreamsPage() {
                           <td className="text-text-muted">{row.declared_length ?? "-"}</td>
                           <td>
                             <Badge tone={row.complete ? "ok" : "warn"}>
-                              {row.complete ? "complete" : "partial"}
+                              {row.complete ? t("complete") : t("partial")}
                             </Badge>
                           </td>
                         </tr>
@@ -375,19 +450,19 @@ export default function StreamsPage() {
                 </table>
               ) : (
                 <EmptyState
-                  title="No messages framed"
-                  description="Apply a framing rule to split the byte stream into messages."
+                  title={t("No messages framed")}
+                  description={t("Apply a framing rule to split the byte stream into messages.")}
                 />
               )}
             </Panel>
 
-            <Panel title="Packets behind the current window">
+            <Panel title={t("Packets behind the current window")}>
               {bytes.data?.packet_references?.length ? (
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Packet</th>
-                      <th>Stream offsets</th>
+                      <th>{t("Packet")}</th>
+                      <th>{t("Stream offsets")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -405,8 +480,8 @@ export default function StreamsPage() {
                 </table>
               ) : (
                 <EmptyState
-                  title="No packets in this window"
-                  description="Bytes with no packet behind them are holes."
+                  title={t("No packets in this window")}
+                  description={t("Bytes with no packet behind them are holes.")}
                 />
               )}
             </Panel>

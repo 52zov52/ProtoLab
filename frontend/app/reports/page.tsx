@@ -18,6 +18,7 @@ import {
   shortId,
   type EvidenceItem,
 } from "@/lib/evidence-links";
+import { useI18n } from "@/lib/i18n";
 
 type Section = {
   number: number;
@@ -29,6 +30,7 @@ type Section = {
 
 export default function ReportsPage() {
   const workspace = useWorkspace();
+  const { t } = useI18n();
   const params = useSearchParams();
   const projectId = params.get("project") ?? workspace.projectId;
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export default function ReportsPage() {
   if (!projectId) {
     return (
       <div className="p-4">
-        <EmptyState title="No project selected" />
+        <EmptyState title={t("No project selected")} />
       </div>
     );
   }
@@ -59,10 +61,11 @@ export default function ReportsPage() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-4 py-3">
         <div>
-          <h1 className="text-sm font-semibold tracking-tight text-text">Reports</h1>
+          <h1 className="text-sm font-semibold tracking-tight text-text">{t("Reports")}</h1>
           <p className="mt-0.5 max-w-3xl text-2xs leading-relaxed text-text-muted">
-            Every section is assembled from stored facts and lists the evidence it came
-            from. A report can be produced entirely offline, without any language model.
+            {t(
+              "Every section is assembled from stored facts and lists the evidence it came from. A report can be produced entirely offline, without any language model.",
+            )}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -73,7 +76,7 @@ export default function ReportsPage() {
                 checked={useLlm}
                 onChange={(event) => setUseLlm(event.target.checked)}
               />
-              narrate with local model
+              {t("narrate with local model")}
             </label>
             <button
               type="button"
@@ -82,7 +85,7 @@ export default function ReportsPage() {
               onClick={async () => {
                 const created = await action.run(() =>
                   api.report(projectId, {
-                    title: "Investigation report",
+                    title: t("Investigation report"),
                     use_llm: useLlm,
                   }),
                 );
@@ -92,7 +95,7 @@ export default function ReportsPage() {
                 }
               }}
             >
-              {action.pending ? "Generating…" : "Generate report"}
+              {action.pending ? t("Generating…") : t("Generate report")}
             </button>
           </div>
           {useLlm && aiInfo.data ? (
@@ -104,12 +107,13 @@ export default function ReportsPage() {
               );
               return enabled ? (
                 <p className="text-2xs text-text-faint">
-                  Server switch is on; the report will still be produced if the model
-                  cannot narrate in time.
+                  {t(
+                    "Server switch is on; the report will still be produced if the model cannot narrate in time.",
+                  )}
                 </p>
               ) : (
                 <p className="text-2xs text-status-warn">
-                  External AI is disabled on this server, so the checkbox has no effect.
+                  {t("External AI is disabled on this server, so the checkbox has no effect.")}
                 </p>
               );
             })()
@@ -118,11 +122,11 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-[280px_1fr]">
-        <Panel title="Generated reports">
+        <Panel title={t("Generated reports")}>
           {reports.state === "loading" ? (
             <Skeleton rows={5} />
           ) : (reports.data ?? []).length === 0 ? (
-            <EmptyState title="No reports yet" />
+            <EmptyState title={t("No reports yet")} />
           ) : (
             <ul>
               {(reports.data as Record<string, unknown>[]).map((report) => {
@@ -144,7 +148,7 @@ export default function ReportsPage() {
                       <span className="block truncate text-2xs text-text">{row.title}</span>
                       <span className="mt-0.5 flex items-center gap-2 text-2xs text-text-faint">
                         {new Date(row.created_at).toISOString().slice(0, 19)}
-                        {row.ai_used && <Badge tone="warn">AI used</Badge>}
+                        {row.ai_used && <Badge tone="warn">{t("AI used")}</Badge>}
                       </span>
                     </button>
                   </li>
@@ -158,7 +162,7 @@ export default function ReportsPage() {
         </Panel>
 
         <Panel
-          title="Report"
+          title={t("Report")}
           actions={
             selectedId && (
               <div className="flex gap-2">
@@ -168,7 +172,7 @@ export default function ReportsPage() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Markdown
+                  {t("Markdown")}
                 </a>
                 <a
                   className="btn"
@@ -176,7 +180,7 @@ export default function ReportsPage() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  JSON
+                  {t("JSON")}
                 </a>
               </div>
             )
@@ -184,8 +188,10 @@ export default function ReportsPage() {
         >
           {!selectedId ? (
             <EmptyState
-              title="No report selected"
-              description="Generate a report to see the investigation written out with its evidence."
+              title={t("No report selected")}
+              description={t(
+                "Generate a report to see the investigation written out with its evidence.",
+              )}
             />
           ) : current.state === "loading" ? (
             <Skeleton rows={14} />
@@ -210,6 +216,7 @@ function ReportView({
 }) {
   const workspace = useWorkspace();
   const router = useRouter();
+  const { t } = useI18n();
   const sections = (report.sections ?? []) as Section[];
   const warnings = (report.ai_warnings ?? []) as string[];
 
@@ -226,14 +233,16 @@ function ReportView({
       <div>
         <h2 className="text-sm font-semibold text-text">{String(report.title)}</h2>
         <p className="mt-0.5 text-2xs text-text-faint">
-          generator: {String(report.generator)} · created{" "}
-          {new Date(String(report.created_at)).toISOString().slice(0, 19)}
+          {t("generator: {generator} · created {created}", {
+            generator: String(report.generator),
+            created: new Date(String(report.created_at)).toISOString().slice(0, 19),
+          })}
         </p>
       </div>
 
       {report.ai_used === true && (
         <div className="rounded-sm border border-status-warn/30 bg-status-warn/5 p-2.5">
-          <Badge tone="warn">a language model contributed to this report</Badge>
+          <Badge tone="warn">{t("a language model contributed to this report")}</Badge>
           {warnings.map((warning, index) => (
             <Caveat key={index} tone="warn">
               {warning}
@@ -261,7 +270,7 @@ function ReportView({
           </div>
           {section.evidence.length > 0 && (
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-2xs text-text-faint">
-              <span>evidence:</span>
+              <span>{t("evidence:")}</span>
               {section.evidence.slice(0, 8).map((item) => {
                 const target = evidenceTarget(item, projectId);
                 const text = `${target.label}:${shortId(item.id)}`;
@@ -271,7 +280,7 @@ function ReportView({
                     key={key}
                     type="button"
                     className="cursor-pointer underline decoration-dotted underline-offset-2 hover:text-accent"
-                    title={`open ${target.label} ${item.id}`}
+                    title={t("open {label} {id}", { label: target.label, id: item.id })}
                     onClick={() => openEvidence(item)}
                   >
                     {text}

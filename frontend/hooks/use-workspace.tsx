@@ -27,6 +27,8 @@ interface WorkspaceState {
   selectStream: (id: string | null) => void;
   selectMessage: (id: string | null) => void;
   refreshHealth: () => Promise<void>;
+  /** Drop the selected project (e.g. after deleting it). */
+  clearProject: () => void;
   /** Bumped whenever a mutation invalidates the current view. */
   revision: number;
   invalidate: () => void;
@@ -97,12 +99,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (!state.projectId) return;
     try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ projectId: state.projectId, projectName: state.projectName }),
-      );
+      if (state.projectId) {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ projectId: state.projectId, projectName: state.projectName }),
+        );
+      } else {
+        // A cleared (or deleted) project must not be resurrected on reload.
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
       /* storage unavailable; the app still works, the selection is just not sticky */
     }
@@ -196,6 +202,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setState((s) => ({ ...s, sessionId: id, streamId: null, messageId: null })),
       selectStream: (id) => setState((s) => ({ ...s, streamId: id, messageId: null })),
       selectMessage: (id) => setState((s) => ({ ...s, messageId: id })),
+      clearProject: () =>
+        setState((s) => ({
+          ...s,
+          projectId: null,
+          projectName: null,
+          captureId: null,
+          sessionId: null,
+          streamId: null,
+          messageId: null,
+        })),
       refreshHealth,
       invalidate: () => setState((s) => ({ ...s, revision: s.revision + 1 })),
     }),
