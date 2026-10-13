@@ -36,6 +36,11 @@ RUN python -m venv /opt/venv \
         "python-multipart==0.0.20" "numpy==2.3.1"
 
 COPY app ./app
+# The Alembic environment is part of the application, not a developer tool: the
+# API migrates itself on startup, so without the scripts every start aborts with
+# "Path doesn't exist: /app/alembic".
+COPY alembic ./alembic
+COPY alembic.ini ./alembic.ini
 
 # Writable state lives outside the read-only root.
 RUN mkdir -p /app/data/storage /app/data/secrets /app/data/temp /app/data/logs \

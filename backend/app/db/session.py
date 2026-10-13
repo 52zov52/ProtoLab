@@ -35,7 +35,15 @@ def build_engine(settings: Settings) -> Engine:
 
 
 def create_schema(engine: Engine) -> None:
+    """Create the schema if it is missing, then bring it to the head revision.
+
+    Imported lazily so that a process which only ever reads the models (a test
+    collecting schemas, for instance) does not pay for Alembic's import.
+    """
     Base.metadata.create_all(engine)
+    from .migrations import run_migrations
+
+    run_migrations(engine)
 
 
 def make_session_factory(engine: Engine) -> sessionmaker[Session]:

@@ -1,7 +1,7 @@
 # Testing
 
 ```bash
-# Backend - 172 tests (test_api_docs.py keeps docs/API.md honest)
+# Backend - 175 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
 # Frontend - 65 tests
@@ -22,7 +22,37 @@ python scripts/build_examples.py
 # End-to-end, against a running server
 python -m app &
 python scripts/live_check.py
+
+# Schema migrations (Alembic; the API also migrates itself on startup)
+cd backend && python -m alembic upgrade head       # apply, or create the schema
+cd backend && python -m alembic current            # current revision
+cd backend && python -m alembic revision --autogenerate -m "add a column"
 ```
+
+## Migrations
+
+`backend/alembic/` holds the schema migrations; the URL comes from the same
+settings object the API uses (`MPLAB_DATABASE_URL`, or the SQLite file under
+`MPLAB_DATA_DIR`), so the CLI and the application can never disagree about which
+database they touch.
+
+```bash
+cd backend
+python -m alembic upgrade head
+```
+
+The application migrates itself on startup: `create_all` runs first so a
+database created by an earlier build still opens, and Alembic then runs to head.
+A database with tables but no `alembic_version` row is **stamped** at head
+instead of upgraded — replaying `0001_initial` against existing tables would
+abort on the first one. `tests/test_migrations.py` builds the schema both ways
+and compares them, so "the models and the migration agree" is a checked claim
+rather than an assumption.
+
+To add a migration: change a model, run `revision --autogenerate`, then read the
+generated file — autogenerate cannot see a rename or a data-dependent change.
+Then run `pytest tests/test_migrations.py`, which fails if the migration no
+longer reproduces the models.
 
 ## Layout
 
@@ -40,6 +70,7 @@ python scripts/live_check.py
 | `test_byte_analysis.py` | Byte-column classification and entropy |
 | `test_anomaly_detection.py` | Isolation Forest: seeding, refusal, API round-trip |
 | `test_llm_narration.py` | LLM degradation, redaction, context cap, consent |
+| `test_migrations.py` | Alembic reproduces the models; an existing database is stamped, not replayed |
 | `test_bind_config.py` | Bind/loopback security configuration |
 | `test_cors.py` | CORS headers present for allowed origins, absent otherwise |
 | `test_frontend_safety.py` | No `dangerouslySetInnerHTML`, no remote assets, headers set |

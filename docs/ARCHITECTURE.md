@@ -129,6 +129,19 @@ can always get back to the capture.
   this is documented as a limitation rather than presented as distributed
   control.
 
+## Schema lifecycle
+
+The schema is versioned with Alembic (`backend/alembic`, current head `0001`).
+`create_app` runs `Base.metadata.create_all` and then `alembic upgrade head`, so a
+database made by an earlier build still opens: a database with tables but no
+`alembic_version` row is **stamped** at head rather than migrated from scratch,
+which would fail on the tables that already exist. `tests/test_migrations.py`
+builds the schema from the migration and from the models into two throwaway
+databases and compares them, so the two cannot drift apart silently.
+
+Operators who manage the schema themselves run `alembic upgrade head` with
+`MPLAB_AUTO_CREATE_SCHEMA=false`; the procedure is in `docs/UPGRADING.md`.
+
 ## Deployment
 
 `docker-compose.yml` runs two services on loopback. The backend image is

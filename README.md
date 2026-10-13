@@ -175,6 +175,7 @@ them from the real `sample_protocol/` capture.
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What is not implemented |
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Measured throughput and known bottlenecks |
 | [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | RU/EN localization: mechanism, catalogues, coverage test |
+| [docs/UPGRADING.md](docs/UPGRADING.md) | Upgrading an install: backup → upgrade → verify |
 | [docs/TESTING.md](docs/TESTING.md) | How the suite is organised |
 | [docs/DEMO_SCENARIO.md](docs/DEMO_SCENARIO.md) | The 17-step walkthrough |
 | [docs/TZ_PRODUCTION.md](docs/TZ_PRODUCTION.md) | Production-readiness spec for a handover developer |
