@@ -156,6 +156,11 @@ export default function StreamsPage() {
                 {t("Protocols")}
               </span>
             )}
+            {protocolLabels.some((label) => protocolFilter.isHidden(label)) && (
+              <button type="button" className="btn" onClick={protocolFilter.showAll}>
+                {t("Show all")}
+              </button>
+            )}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {visibleStreams.map((s) => (

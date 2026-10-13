@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
+import { api } from "@/lib/api";
 import { formatBytes, formatNumber } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 
@@ -23,25 +24,18 @@ export default function OverviewPage() {
 
   const metrics = useAsync(
     () =>
-      workspace.projectId
-        ? api_metrics(workspace.projectId)
-        : Promise.resolve(null),
+      workspace.projectId ? api.metrics(workspace.projectId) : Promise.resolve(null),
     [workspace.projectId, workspace.revision],
   );
 
   const integrity = useAsync(
     () =>
-      workspace.projectId
-        ? import("@/lib/api").then((m) => m.api.integrity(workspace.projectId!))
-        : Promise.resolve(null),
+      workspace.projectId ? api.integrity(workspace.projectId) : Promise.resolve(null),
     [workspace.projectId, workspace.revision],
   );
 
   const analyzers = useAsync(
-    () =>
-      workspace.projectId
-        ? import("@/lib/api").then((m) => m.api.anomaliesStatus())
-        : Promise.resolve(null),
+    () => (workspace.projectId ? api.anomaliesStatus() : Promise.resolve(null)),
     [workspace.projectId],
   );
 
@@ -240,8 +234,4 @@ export default function OverviewPage() {
       </div>
     </div>
   );
-}
-
-function api_metrics(projectId: string) {
-  return import("@/lib/api").then((m) => m.api.metrics(projectId));
 }

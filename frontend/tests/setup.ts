@@ -24,3 +24,17 @@ if (!window.matchMedia) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
+
+// The packet table and the hex viewer measure their viewport with a
+// ResizeObserver. Tests only need it to exist; no resize is ever delivered.
+if (typeof window.ResizeObserver === "undefined") {
+  Object.defineProperty(window, "ResizeObserver", {
+    writable: true,
+    configurable: true,
+    value: class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  });
+}

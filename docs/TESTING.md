@@ -4,7 +4,7 @@
 # Backend - 175 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
-# Frontend - 65 tests
+# Frontend - 95 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -86,6 +86,12 @@ longer reproduces the models.
 | `frontend/tests/hypotheses-page.test.tsx` | Rule editor validation and the rule → corpus → counterexamples loop (§23) |
 | `frontend/tests/i18n.test.tsx` | RU/EN selection, persistence, `<html lang>`, and translation coverage (Этап 8) |
 | `frontend/tests/workspace-project.test.tsx` | A project the server does not know is dropped; an unreachable backend is not |
+| `frontend/tests/packets-page.test.tsx` | Packet table: capture selector, list failure, per-packet bytes, filters in the request (§23) |
+| `frontend/tests/sessions-page.test.tsx` | TCP sessions: empty state, selection → observed timeline and diagnostics (§23) |
+| `frontend/tests/overview-page.test.tsx` | Project picker: switch, create, delete the active project (§23) |
+| `frontend/tests/reports-page.test.tsx` | Report export links point at the backend for the selected report (§23) |
+| `frontend/tests/streams-page.test.tsx` | Coverage gaps stay gaps; a hidden protocol label hides the stream, not the data |
+| `frontend/tests/empty-states.test.tsx` | Every tool names the selection it needs instead of showing a blank panel |
 
 ## The test bench
 
