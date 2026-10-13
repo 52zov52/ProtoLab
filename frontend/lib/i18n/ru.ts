@@ -375,6 +375,32 @@ export const RU_MESSAGES: Record<string, string> = {
   unknown: "неизвестно",
 
   // ------------------------------------------------------------------------
+  // Anomaly detection: scoring against a baseline model
+  // ------------------------------------------------------------------------
+  "Score a capture against the baseline": "Оценить захват по базовой линии",
+  Model: "Модель",
+  "Select a model": "Выберите модель",
+  "Report at most": "Показать не более",
+  "Scoring…": "Оценка…",
+  "Score captures": "Оценить захваты",
+  "Captures to score": "Захваты для оценки",
+  "Train a baseline first; the server refuses a capture that cannot supply every feature the model was trained on.":
+    "Сначала обучите базовую линию: сервер откажет захвату, который не может дать каждый признак, на котором обучена модель.",
+  "Scored result": "Результат оценки",
+  "{count} entity(ies) reported · scope {scope}":
+    "сообщено сущностей: {count} · scope {scope}",
+  "Outlier score per entity": "Оценка выброса по сущностям",
+  "Nothing scored": "Нечего оценивать",
+  "No entity was reported for this scope.":
+    "Для этого scope не сообщено ни одной сущности.",
+  Entity: "Сущность",
+  Score: "Оценка",
+  "What pushed the score": "Что повысило оценку",
+  Stream: "Поток",
+  "mean {value}": "среднее {value}",
+  "message {index}": "сообщение {index}",
+
+  // ------------------------------------------------------------------------
   // Page fragments (see lib/i18n/locales/*)
   // ------------------------------------------------------------------------
   ...RU_PAGES_A,

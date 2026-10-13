@@ -10,6 +10,34 @@ state.
 
 ## Not implemented
 
+### UI libraries from §4 that were not adopted
+
+**shadcn/ui and a graph library (D3.js / Cytoscape.js) are not used.**
+
+The §4 stack was adopted where it changes what the analyst can do:
+
+- TanStack Table + TanStack Virtual — packet and message tables (windowing,
+  sorting) in `components/packet-table.tsx` and `components/message-table.tsx`.
+- Recharts — the outlier-score ranking on the Anomaly Detection page.
+- Monaco Editor — the interpretation editor, bundled locally in
+  `components/spec-editor.tsx` with a textarea fallback.
+
+What was deliberately left as it is:
+
+- **shadcn/ui.** `components/ui.tsx` already provides the panel, badge, empty
+  state, error state, caveat and confirmation primitives the product needs, with
+  the graphite design tokens in one place. Migrating them to shadcn would move
+  that vocabulary into generated files without adding a capability, and would
+  add a per-component dependency on the component registry's version.
+- **D3.js / Cytoscape.js.** The network graph is a small SVG that already pans,
+  zooms, colours edges by detected protocol and marks hub candidates. Its
+  layout is deterministic circular, which is a property worth keeping (the same
+  capture always draws the same picture); a force simulation would not be.
+
+Both are recorded as deviations from §4 rather than as gaps to be filled later.
+If the graph later needs thousands of nodes to stay interactive, a switch to
+Cytoscape is the natural place to spend that complexity.
+
 ### TLS decryption via `SSLKEYLOGFILE`
 
 **Fingerprinting works; decryption does not.**

@@ -13,6 +13,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { useAction, useAsync } from "@/hooks/use-async";
+import { SpecEditor } from "@/components/spec-editor";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { cn, formatTimestamp, hypothesisTone, verdictTone } from "@/lib/format";
@@ -356,15 +357,13 @@ export default function HypothesesPage() {
           }
         >
           <div className="flex h-full min-h-0 flex-col">
-            <textarea
-              className="min-h-[420px] flex-1 resize-none border-0 bg-surface-sunken p-3 font-mono text-2xs text-text outline-none"
+            <SpecEditor
               value={draft}
-              spellCheck={false}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                validateDraft(event.target.value);
+              onChange={(next) => {
+                setDraft(next);
+                validateDraft(next);
               }}
-              aria-label={t("Interpretation specification")}
+              ariaLabel={t("Interpretation specification")}
             />
             <div className="border-t border-line p-2">
               {specError ? (

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { HexComparison, HexViewer } from "@/components/hex-viewer";
+import { MessageTable } from "@/components/message-table";
 import {
   Badge,
   Caveat,
@@ -176,47 +177,11 @@ export default function WorkbenchPage() {
               description={t("Choose a framing rule on the Stream Explorer first.")}
             />
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th />
-                  <th>#</th>
-                  <th>{t("Range")}</th>
-                  <th>{t("Len")}</th>
-                  <th>{t("Entropy")}</th>
-                  <th>{t("Unique")}</th>
-                  <th>{t("State")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((message) => {
-                  const active = selected.includes(message.id);
-                  return (
-                    <tr
-                      key={message.id}
-                      className={cn("cursor-pointer", active && "bg-accent-faint")}
-                      onClick={() => toggle(message.id)}
-                    >
-                      <td>
-                        <input type="checkbox" checked={active} readOnly />
-                      </td>
-                      <td className="text-text-faint">{message.index_in_stream}</td>
-                      <td className="text-text-muted">
-                        {message.start_offset}…{message.end_offset}
-                      </td>
-                      <td>{message.present_length}</td>
-                      <td>{(message.features.entropy ?? 0).toFixed(2)}</td>
-                      <td>{message.features.unique_bytes ?? "-"}</td>
-                      <td>
-                        <Badge tone={message.complete ? "ok" : "warn"}>
-                          {message.complete ? t("complete") : t("partial")}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <MessageTable
+              items={filtered}
+              selected={selected}
+              onToggle={toggle}
+            />
           )}
         </Panel>
 
