@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 
 import { CapturePicker, ProjectPicker } from "@/components/pickers";
 import {
@@ -22,16 +20,6 @@ import { useI18n } from "@/lib/i18n";
 export default function OverviewPage() {
   const workspace = useWorkspace();
   const { t } = useI18n();
-  const params = useSearchParams();
-  const projectParam = params.get("project");
-
-  // A project passed in the URL becomes the active one.
-  useEffect(() => {
-    if (projectParam && projectParam !== workspace.projectId) {
-      workspace.selectProject(projectParam, workspace.projectName ?? projectParam.slice(0, 12));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectParam]);
 
   const metrics = useAsync(
     () =>
@@ -221,7 +209,12 @@ export default function OverviewPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <CapturePicker />
+              <div className="space-y-4">
+                <CapturePicker />
+                {/* Always reachable: creating, switching and deleting a project
+                    must not require a state the analyst can get stuck without. */}
+                <ProjectPicker />
+              </div>
               <Panel title={t("Research path")}>
                 <ol className="space-y-2 p-3 text-2xs text-text-muted">
                   {[

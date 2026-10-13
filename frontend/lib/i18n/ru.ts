@@ -50,6 +50,7 @@ export const RU_MESSAGES: Record<string, string> = {
   "Local secure mode. Every conclusion links to the bytes it came from.":
     "Локальный защищённый режим. Каждый вывод ссылается на байты, из которых он получен.",
   "Current project": "Текущий проект",
+  "Open the project list": "Открыть список проектов",
   "no project": "нет проекта",
   "capture {id}": "захват {id}",
   "no capture selected": "захват не выбран",

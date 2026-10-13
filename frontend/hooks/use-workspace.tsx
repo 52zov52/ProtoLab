@@ -163,6 +163,61 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // The active project has to exist.
+  //
+  // An id reaches the workspace from two places that outlive the data: a URL
+  // (?project= in a report link or a bookmark) and this browser's localStorage
+  // from a previous session. Both can name a project that is not there any
+  // more — the database is local and is recreated more often than links are.
+  // Trusting such an id blindly strands the analyst on a "project does not
+  // exist" error with no way back to the tool that creates projects, so an id
+  // the server does not know about is dropped and the app falls back to the
+  // "open a project" state.
+  //
+  // An unreachable backend is deliberately *not* treated as a missing project:
+  // the data may well still be there, and discarding a working selection over
+  // a transient outage would throw the analyst's state away. The 15-second
+  // health poll reports the outage instead.
+  //
+  // On success the authoritative name replaces the one in the URL/localStorage,
+  // which is what makes a deep link show "Project" in the sidebar rather than
+  // "none selected".
+  const [verifiedProjectId, setVerifiedProjectId] = useState<string | null>(null);
+  useEffect(() => {
+    const id = state.projectId;
+    if (!id || id === verifiedProjectId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const project = await api.getProject(id);
+        if (cancelled) return;
+        setState((s) => (s.projectId === id ? { ...s, projectName: project.name } : s));
+        setVerifiedProjectId(id);
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 404) {
+          setState((s) =>
+            s.projectId === id ? { ...s, projectId: null, projectName: null } : s,
+          );
+          setVerifiedProjectId(null);
+          // The URL still names the project we just gave up on, so without this
+          // every reload re-adopts it and the analyst is bounced straight back
+          // to the dead end. Rewriting the address keeps the current view.
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            if (url.searchParams.get("project") === id) {
+              url.searchParams.delete("project");
+              window.history.replaceState(window.history.state, "", url.toString());
+            }
+          }
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.projectId, verifiedProjectId]);
+
   const refreshHealth = useCallback(async () => {
     try {
       await api.health();

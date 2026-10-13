@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Boxes,
+  ChevronsUpDown,
   FileSearch,
   FileText,
   Fingerprint,
@@ -72,18 +73,31 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="border-b border-line px-3 py-2">
-        <p className="text-2xs uppercase tracking-wider text-text-faint">{t("Project")}</p>
-        <p
-          className={cn(
-            "mt-0.5 truncate font-mono text-2xs",
-            projectName ? "text-accent" : "text-text-faint",
-          )}
-          title={projectName ?? t("No project selected")}
-        >
-          {projectName ?? t("none selected")}
-        </p>
-      </div>
+      {/* The project name is the switch: the Overview page carries the project
+          list (create, open, delete), so a control that reaches it from every
+          tool is what stops a selection from feeling like a dead end. */}
+      <Link
+        href="/"
+        title={t("Open the project list")}
+        className="block border-b border-line px-3 py-2 transition-colors hover:bg-surface-raised"
+      >
+        <span className="flex items-center justify-between gap-1">
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="text-2xs uppercase tracking-wider text-text-faint">
+              {t("Project")}
+            </span>
+            <ChevronsUpDown className="h-3 w-3 shrink-0 text-text-faint" aria-hidden />
+          </span>
+          <span
+            className={cn(
+              "min-w-0 truncate font-mono text-2xs",
+              projectName ? "text-accent" : "text-text-faint",
+            )}
+          >
+            {projectName ?? t("none selected")}
+          </span>
+        </span>
+      </Link>
 
       <div className="flex-1 overflow-y-auto p-1.5">
         {NAV.map((entry) => {

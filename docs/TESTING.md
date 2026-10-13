@@ -4,7 +4,7 @@
 # Backend - 172 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
-# Frontend - 61 tests
+# Frontend - 65 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -54,6 +54,7 @@ python scripts/live_check.py
 | `frontend/tests/captures-page.test.tsx` | Captures empty/error states and import failure (§23) |
 | `frontend/tests/hypotheses-page.test.tsx` | Rule editor validation and the rule → corpus → counterexamples loop (§23) |
 | `frontend/tests/i18n.test.tsx` | RU/EN selection, persistence, `<html lang>`, and translation coverage (Этап 8) |
+| `frontend/tests/workspace-project.test.tsx` | A project the server does not know is dropped; an unreachable backend is not |
 
 ## The test bench
 
@@ -154,6 +155,10 @@ get wrong:
 - with no project selected the Captures tool says so instead of showing an empty
   list, an empty project gets an explicit empty state, a failed request is shown
   with a Retry, and a rejected import reports why
+- a project id that the server does not know (a stale `?project=` link, or a
+  project deleted underneath the app) is dropped, so the tool that creates
+  projects is reachable again; an unreachable backend keeps the selection
+  instead of discarding the analyst's work
 - the rule editor does not claim a broken draft is valid JSON, invalid JSON never
   reaches the server, a server rejection is reported, and the rule → corpus →
   counterexamples loop renders the counterexample it produced
