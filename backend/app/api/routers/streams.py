@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Query
@@ -11,7 +12,7 @@ from ...analyzers.byte_analysis import align_messages, group_by_length, hexdump
 from ...analyzers.framing import FramingConfig, suggest_framing
 from ...core.errors import NotFound
 from ...models import Capture, Message, Stream, TcpSession
-from ...schemas import CompareRequest, MessageOut, StreamOut
+from ...schemas import CompareRequest, DecryptRequest, MessageOut, StreamOut
 from ..context import SessionDep, StorageDep, load_capture
 
 router = APIRouter()
@@ -132,6 +133,153 @@ def stream_tls_fingerprints(stream_id: str, session: SessionDep, storage: Storag
             "indication of maliciousness. A missing or unreliable fingerprint means the "
             "handshake was absent or truncated in this capture, not that the traffic was "
             "not TLS."
+        ),
+    }
+
+
+@router.post("/streams/{stream_id}/decrypt")
+def stream_decrypt(
+    stream_id: str,
+    payload: DecryptRequest,
+    session: SessionDep,
+    storage: StorageDep,
+) -> dict:
+    """Decrypt the application records of this direction with a supplied key log.
+
+    Everything about the result is explicit. A record is returned with its
+    plaintext only when authentication succeeds for the negotiated suite; every
+    other record reports the reason it could not be opened, and nothing is ever
+    rendered in its place. A direction that carries no handshake means the suite
+    and the server random cannot be established from this stream, which is said
+    rather than guessed at.
+    """
+    from ...analyzers.tls_decryption import (
+        SessionKeys,
+        decrypt_records,
+        describe_keylog,
+        parse_keylog,
+        summarise,
+    )
+    from ...analyzers.tls_fingerprinting import summarise_handshakes
+    from ...models import KeyLog
+
+    stream_row = _load_stream(session, stream_id)
+    capture = load_capture(session, _capture_id(session, stream_row))
+    keylog = session.get(KeyLog, payload.keylog_id)
+    if keylog is None or keylog.project_id != capture.project_id:
+        raise NotFound("This key log does not belong to the project of this stream.")
+
+    path = Path(keylog.storage_path)
+    if not path.is_file():
+        raise NotFound("The key log file is missing from storage; upload it again.")
+    entries = parse_keylog(path.read_text(encoding="utf-8", errors="replace"))
+    if not any(entries.values()):
+        raise NotFound("The key log holds no usable key entries.")
+
+    paths, store = _store(capture, storage)
+    if not store.available:
+        raise NotFound("The reconstructed stream artefact is missing.")
+    descriptor = store.get(stream_id)
+    if descriptor is None:
+        raise NotFound(f"Stream {stream_id!r} has no artefact entry.")
+    descriptor.capture_id = capture.id
+    rebuilt = store.build(descriptor)
+
+    def scan(window: list[tuple[int, bytes]]) -> dict:
+        """Client/server randoms and the negotiated suite from one direction."""
+        found = {"client_random": None, "server_random": None, "suite": None}
+        for offset, chunk in window:
+            for handshake in summarise_handshakes(chunk, base_offset=offset):
+                if handshake.get("kind") == "JA3" and found["client_random"] is None:
+                    found["client_random"] = handshake.get("client_random")
+                if handshake.get("kind") == "JA3S":
+                    found["server_random"] = found["server_random"] or handshake.get(
+                        "server_random"
+                    )
+                    if handshake.get("cipher_suites"):
+                        found["suite"] = found["suite"] or handshake["cipher_suites"][0]
+        return found
+
+    window: list[tuple[int, bytes]] = list(
+        rebuilt.contiguous_bytes(0, min(rebuilt.stream_length, MAX_TLS_SCAN_BYTES))
+    )
+    seen = scan(window)
+
+    # The suite is a property of the session, not of the direction: a peer that
+    # chooses TLS_AES_128_GCM_SHA256 says so in *its* hello. Without that, the
+    # client's own records would be reported as unopenable for no reason other
+    # than which side happened to talk first.
+    peer_direction = "b2a" if stream_row.direction == "a2b" else "a2b"
+    suite_from_peer = False
+    if seen["suite"] is None:
+        peer = session.execute(
+            select(Stream)
+            .where(Stream.session_id == stream_row.session_id)
+            .where(Stream.direction == peer_direction)
+        ).scalars().first()
+        if peer is not None:
+            peer_descriptor = store.get(peer.id)
+            if peer_descriptor is not None:
+                peer_descriptor.capture_id = capture.id
+                peer_rebuilt = store.build(peer_descriptor)
+                peer_window = list(
+                    peer_rebuilt.contiguous_bytes(
+                        0, min(peer_rebuilt.stream_length, MAX_TLS_SCAN_BYTES)
+                    )
+                )
+                peer_scan = scan(peer_window)
+                if peer_scan["suite"] is not None:
+                    seen["suite"] = peer_scan["suite"]
+                    seen["server_random"] = seen["server_random"] or peer_scan["server_random"]
+                    suite_from_peer = True
+
+    client_random = seen["client_random"]
+    server_random = seen["server_random"]
+    suite = seen["suite"]
+
+    direction = "client" if stream_row.direction == "a2b" else "server"
+    keys = SessionKeys(
+        direction=direction,  # type: ignore[arg-type]
+        cipher_suite=suite,
+        client_random=bytes.fromhex(client_random) if client_random else None,
+        server_random=bytes.fromhex(server_random) if server_random else None,
+        tls13_secrets=entries,
+    )
+    if suite and suite not in (0x1301, 0x1302, 0x1303) and keys.master_secret is None:
+        # TLS 1.2 needs the master secret, keyed on the client random.
+        secrets = entries.get("CLIENT_RANDOM", [])
+        if client_random:
+            wanted = bytes.fromhex(client_random)
+            for random, secret in secrets:
+                if random == wanted:
+                    keys.master_secret = secret
+                    break
+
+    results = []
+    for offset, chunk in window:
+        results.extend(decrypt_records(chunk, keys, base_offset=offset))
+
+    return {
+        "stream_id": stream_id,
+        "capture_id": capture.id,
+        "direction": direction,
+        "keylog": {
+            "id": keylog.id,
+            "name": keylog.name,
+            "sha256": keylog.sha256,
+            "labels": describe_keylog(entries)["labels"],
+        },
+        "session": {
+            **keys.summary(),
+            "suite_taken_from_other_direction": suite_from_peer,
+        },
+        "records": [result.to_dict() for result in results],
+        "summary": summarise(results),
+        "interpretation": (
+            "Decrypted bytes are exactly what the peer sent, proven by the "
+            "authentication of the negotiated cipher suite. A record reported as "
+            "auth_failed, unsupported or truncated has no plaintext shown, and "
+            "nothing is ever rendered in its place."
         ),
     }
 

@@ -37,6 +37,10 @@ class TlsHandshake:
     ec_point_formats: list[int] = field(default_factory=list)
     sni: str | None = None
     alpn: list[str] = field(default_factory=list)
+    # The client and server randoms are what a key log's entries are keyed on,
+    # so a session can be matched to the keys that decrypt it.
+    client_random: bytes | None = None
+    server_random: bytes | None = None
     complete: bool = False
     kind: str = "client_hello"
     parse_errors: list[str] = field(default_factory=list)
@@ -157,7 +161,8 @@ def _parse_client_hello(payload: bytes, offset: int, record_version: int, trunca
     legacy_version = struct.unpack_from(">H", payload, cursor)[0]
     cursor += 2
     hs.version = _version_name(legacy_version)
-    cursor += 32  # random
+    hs.client_random = payload[cursor : cursor + 32]
+    cursor += 32
     session_len = payload[cursor]
     cursor += 1 + session_len
     # Every length read below is bounds-checked: a capture truncated mid-record
@@ -256,6 +261,7 @@ def _parse_server_hello(payload: bytes, offset: int, record_version: int, trunca
     if len(payload) < 35:
         raise TlsParseError("ServerHello body shorter than the 35-byte fixed part")
     hs.version = _version_name(struct.unpack_from(">H", payload, 0)[0])
+    hs.server_random = payload[2 : 2 + 32]
     cursor = 2 + 32
     session_len = payload[cursor]
     cursor += 1 + session_len
@@ -339,6 +345,8 @@ def fingerprint(hs: TlsHandshake) -> dict[str, object]:
         "ec_point_formats": hs.ec_point_formats,
         "sni": hs.sni,
         "alpn": hs.alpn,
+        "client_random": hs.client_random.hex() if hs.client_random else None,
+        "server_random": hs.server_random.hex() if hs.server_random else None,
         "offset_in_stream": hs.offset_in_stream,
         "analyzer_version": FINGERPRINT_VERSION,
     }

@@ -663,6 +663,37 @@ export const api = {
     request("/api/anomalies/train", z.record(z.string(), z.unknown()), json(body)),
   anomaliesScore: (body: Record<string, unknown>) =>
     request("/api/anomalies/score", z.record(z.string(), z.unknown()), json(body)),
+
+  // -- key logs (SSLKEYLOGFILE) ----------------------------------------- //
+  /** The response never carries the secrets, only what the log holds. */
+  keylogs: (projectId: string) =>
+    request(
+      `/api/projects/${assertId(projectId, "project_id")}/keylogs`,
+      z.array(z.record(z.string(), z.unknown())),
+    ),
+  uploadKeylog: (projectId: string, file: File, name?: string) => {
+    const form = new FormData();
+    form.append("name", name ?? file.name);
+    form.append("file", file);
+    return request(
+      `/api/projects/${assertId(projectId, "project_id")}/keylogs`,
+      z.record(z.string(), z.unknown()),
+      { method: "POST", body: form },
+    );
+  },
+  deleteKeylog: (projectId: string, keylogId: string) =>
+    request(
+      `/api/projects/${assertId(projectId, "project_id")}/keylogs/${assertId(keylogId, "keylog_id")}`,
+      z.never().or(z.null()),
+      { method: "DELETE" },
+    ),
+  /** Decrypt the application records of one direction with a supplied key log. */
+  decryptStream: (streamId: string, keylogId: string) =>
+    request(
+      `/api/streams/${assertId(streamId, "stream_id")}/decrypt`,
+      z.record(z.string(), z.unknown()),
+      json({ keylog_id: keylogId }),
+    ),
   assistantCapabilities: () =>
     request("/api/assistant/capabilities", z.record(z.string(), z.unknown())),
   assistantQuery: (body: Record<string, unknown>) =>

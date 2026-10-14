@@ -40,22 +40,28 @@ Cytoscape is the natural place to spend that complexity.
 
 ### TLS decryption via `SSLKEYLOGFILE`
 
-**Fingerprinting works; decryption does not.**
+**Fingerprinting works without keys; decryption works only with a key log the
+operator supplies, and only for the suites listed below.**
 
 JA3 and JA3S are computed from the plaintext handshake, so they work on an
-encrypted session and need no keys — see
-`GET /api/streams/{id}/tls`. What is **not** built is ingestion of a TLS key
-log, key matching against observed sessions, and decryption of application
-records.
+encrypted session and need no keys — see `GET /api/streams/{id}/tls`.
+Application records are decrypted only from a key log uploaded to
+`POST /projects/{id}/keylogs` and used by `POST /streams/{id}/decrypt`.
 
-There is deliberately no half-implementation: no fake "decrypted" view, and no
-synthetic plaintext. A capture analysis of an encrypted protocol stops at the
-handshake and says so.
+**Implemented suites**
 
-Implementing it properly means delegating to a real TLS analyser with a
-managed key-log path, matching keys to observed sessions, and reporting
-per-session why decryption failed. It also means treating key logs as secrets:
-owner-only storage, excluded from logs, reports and AI context.
+* TLS 1.2 AES-GCM (`0x009C`, `0x009D`, `0xC013`, `0xC014`, `0xC02B`, `0xC02C`).
+* TLS 1.2 AES-CBC with HMAC (`0x002F`, `0x0035`, `0x003C`).
+* TLS 1.3 AES-GCM and ChaCha20-Poly1305 (`0x1301`, `0x1302`, `0x1303`).
+
+Anything else — a suite outside that table, an incomplete key log, a record
+truncated by the capture — is reported per record with the reason and **no
+plaintext shown**. For AEAD, decryption is authentication, so a failed tag means
+the bytes are not what the keys claim, and nothing is invented in their place.
+
+A key log is treated as the secret it is: stored under a server-generated name with
+owner-only permissions, hashed, never returned by the API, and never included in a
+report, the AI context or an exported `.mplab` archive.
 
 ### Authentication, authorisation and multi-user operation
 

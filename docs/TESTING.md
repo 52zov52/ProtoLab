@@ -1,7 +1,7 @@
 # Testing
 
 ```bash
-# Backend - 175 tests (test_api_docs.py keeps docs/API.md honest)
+# Backend - 201 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
 # Frontend - 103 tests
@@ -71,6 +71,8 @@ longer reproduces the models.
 | `test_anomaly_detection.py` | Isolation Forest: seeding, refusal, API round-trip |
 | `test_llm_narration.py` | LLM degradation, redaction, context cap, consent |
 | `test_migrations.py` | Alembic reproduces the models; an existing database is stamped, not replayed |
+| `test_tls_decryption.py` | TLS 1.2/1.3 round trips, and every refusal path (wrong key, flip, truncation, unsupported) |
+| `test_tls_keylog_api.py` | Key-log upload/list/delete, ownership, size ceiling, decrypt refusal |
 | `test_bind_config.py` | Bind/loopback security configuration |
 | `test_cors.py` | CORS headers present for allowed origins, absent otherwise |
 | `test_frontend_safety.py` | No `dangerouslySetInnerHTML`, no remote assets, headers set |

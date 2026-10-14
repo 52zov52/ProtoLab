@@ -401,6 +401,32 @@ export const RU_MESSAGES: Record<string, string> = {
   "message {index}": "сообщение {index}",
 
   // ------------------------------------------------------------------------
+  // TLS decryption: key logs and record opening
+  // ------------------------------------------------------------------------
+  "TLS key log": "Ключевой журнал TLS",
+  "Upload the key log (SSLKEYLOGFILE) of one side of the conversation to decrypt its application records. The file is hashed, stored with owner-only permissions and never returned by the API; nothing here derives keys from observed traffic.":
+    "Загрузите ключевой журнал (SSLKEYLOGFILE) одной стороны диалога, чтобы расшифровать её прикладные записи. Файл хэшируется, хранится с правами только для владельца и никогда не возвращается API; здесь не выводится ни одного ключа из наблюдённого трафика.",
+  "Upload key log": "Загрузить ключевой журнал",
+  "Uploading…": "Загрузка…",
+  "No key log uploaded yet.": "Ключевой журнал ещё не загружен.",
+  "Decrypt a stream": "Расшифровать поток",
+  "Decryption is only possible for the direction the key log belongs to, and only for cipher suites this build implements (TLS 1.2 AES-CBC/GCM, TLS 1.3 AES-GCM and ChaCha20-Poly1305). Everything else is reported as unsupported, never approximated.":
+    "Расшифровка возможна только для того направления, которому принадлежит ключевой журнал, и только для наборов шифров, реализованных в этой сборке (TLS 1.2 AES-CBC/GCM, TLS 1.3 AES-GCM и ChaCha20-Poly1305). Всё остальное сообщается как неподдерживаемое и никогда не аппроксимируется.",
+  "Select a stream": "Выберите поток",
+  "Key log": "Ключевой журнал",
+  "Select a key log": "Выберите ключевой журнал",
+  Decrypt: "Расшифровать",
+  "Decrypting…": "Расшифровка…",
+  "No application records were found in this direction.":
+    "В этом направлении не найдено прикладных записей.",
+  "{bytes} byte(s) decrypted": "расшифровано байт: {bytes}",
+  "{status}: {count}": "{status}: {count}",
+  "#": "№",
+  Record: "Запись",
+  Plaintext: "Открытый текст",
+  Detail: "Подробность",
+
+  // ------------------------------------------------------------------------
   // Page fragments (see lib/i18n/locales/*)
   // ------------------------------------------------------------------------
   ...RU_PAGES_A,

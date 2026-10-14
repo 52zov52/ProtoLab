@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   Badge,
@@ -11,7 +11,7 @@ import {
   Panel,
   Skeleton,
 } from "@/components/ui";
-import { useAsync } from "@/hooks/use-async";
+import { useAsync, useAction } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
@@ -34,6 +34,260 @@ const CATEGORY_LABEL: Record<string, string> = {
   unknown: "unmatched",
 };
 
+const DECRYPT_TONE: Record<string, StatusTone> = {
+  decrypted: "ok",
+  auth_failed: "bad",
+  unsupported: "warn",
+  truncated: "warn",
+  not_encrypted: "neutral",
+};
+
+/** How much of a decrypted record is shown before the rest moves to a scroll. */
+const PREVIEW_BYTES = 96;
+
+function KeyLogPanel({ projectId }: { projectId: string }) {
+  const { t } = useI18n();
+  const keylogs = useAsync(() => api.keylogs(projectId), [projectId, projectId]);
+  const action = useAction();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  return (
+    <Panel title={t("TLS key log")}>
+      <div className="space-y-2 p-3">
+        <p className="max-w-3xl text-2xs leading-relaxed text-text-muted">
+          {t(
+            "Upload the key log (SSLKEYLOGFILE) of one side of the conversation to decrypt its application records. The file is hashed, stored with owner-only permissions and never returned by the API; nothing here derives keys from observed traffic.",
+          )}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="btn cursor-pointer">
+            {action.pending ? t("Uploading…") : t("Upload key log")}
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".log,.txt,.keylog"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                void action
+                  .run(() => api.uploadKeylog(projectId, file))
+                  .then(() => keylogs.reload());
+              }}
+            />
+          </label>
+          <button type="button" className="btn" onClick={keylogs.reload}>
+            {t("Refresh")}
+          </button>
+          {action.error ? (
+            <span className="font-mono text-2xs text-status-bad">{action.error}</span>
+          ) : null}
+        </div>
+
+        {keylogs.state === "loading" ? (
+          <Skeleton rows={2} />
+        ) : (keylogs.data ?? []).length === 0 ? (
+          <p className="text-2xs text-text-faint">{t("No key log uploaded yet.")}</p>
+        ) : (
+          <ul className="space-y-1">
+            {(keylogs.data ?? []).map((row) => (
+              <li
+                key={String(row.id)}
+                className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-raised px-2 py-1.5"
+              >
+                <span className="truncate text-2xs text-text">{String(row.name)}</span>
+                <span className="font-mono text-2xs text-text-faint">
+                  {String(row.sha256).slice(0, 16)}…
+                </span>
+                {Object.entries((row.labels ?? {}) as Record<string, number>).map(
+                  ([label, count]) => (
+                    <Badge key={label} tone="neutral">
+                      {t("{label}: {count}", { label, count })}
+                    </Badge>
+                  ),
+                )}
+                <button
+                  type="button"
+                  className="btn btn-danger ml-auto"
+                  onClick={() => {
+                    void action.run(async () => {
+                      await api.deleteKeylog(projectId, String(row.id));
+                      keylogs.reload();
+                      return null;
+                    });
+                  }}
+                >
+                  {t("Delete")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+function DecryptPanel({
+  projectId,
+  streamIds,
+}: {
+  projectId: string;
+  streamIds: string[];
+}) {
+  const { t } = useI18n();
+  const keylogs = useAsync(() => api.keylogs(projectId), [projectId]);
+  const [streamId, setStreamId] = useState("");
+  const [keylogId, setKeylogId] = useState("");
+  const action = useAction();
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+
+  const records = ((result?.records ?? []) as Record<string, unknown>[]) ?? [];
+  const summary = (result?.summary ?? {}) as Record<string, unknown>;
+
+  return (
+    <Panel title={t("Decrypt a stream")}>
+      <div className="space-y-3 p-3">
+        <p className="max-w-3xl text-2xs leading-relaxed text-text-muted">
+          {t(
+            "Decryption is only possible for the direction the key log belongs to, and only for cipher suites this build implements (TLS 1.2 AES-CBC/GCM, TLS 1.3 AES-GCM and ChaCha20-Poly1305). Everything else is reported as unsupported, never approximated.",
+          )}
+        </p>
+
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block">
+            <span className="mb-1 block text-2xs uppercase tracking-wider text-text-faint">
+              {t("Stream")}
+            </span>
+            <select
+              className="input"
+              value={streamId}
+              onChange={(event) => setStreamId(event.target.value)}
+            >
+              <option value="">{t("Select a stream")}</option>
+              {streamIds.map((id) => (
+                <option key={id} value={id}>
+                  {id.slice(0, 12)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-2xs uppercase tracking-wider text-text-faint">
+              {t("Key log")}
+            </span>
+            <select
+              className="input"
+              value={keylogId}
+              onChange={(event) => setKeylogId(event.target.value)}
+            >
+              <option value="">{t("Select a key log")}</option>
+              {(keylogs.data ?? []).map((row) => (
+                <option key={String(row.id)} value={String(row.id)}>
+                  {String(row.name)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={action.pending || !streamId || !keylogId}
+            onClick={() => {
+              void action
+                .run(async () => {
+                  const value = await api.decryptStream(streamId, keylogId);
+                  setResult(value as Record<string, unknown>);
+                  return value;
+                })
+                .catch(() => setResult(null));
+            }}
+          >
+            {action.pending ? t("Decrypting…") : t("Decrypt")}
+          </button>
+        </div>
+
+        {action.error ? (
+          <p className="font-mono text-2xs text-status-bad">{action.error}</p>
+        ) : null}
+
+        {result ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {Object.entries((summary.by_status ?? {}) as Record<string, number>).map(
+                ([status, count]) => (
+                  <Badge key={status} tone={DECRYPT_TONE[status] ?? "unknown"}>
+                    {t("{status}: {count}", { status, count })}
+                  </Badge>
+                ),
+              )}
+              <span className="text-2xs text-text-faint">
+                {t("{bytes} byte(s) decrypted", {
+                  bytes: formatNumber(Number(summary.plaintext_bytes ?? 0)),
+                })}
+              </span>
+            </div>
+
+            {records.length === 0 ? (
+              <p className="text-2xs text-text-faint">
+                {t("No application records were found in this direction.")}
+              </p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>{t("#")}</th>
+                    <th>{t("Record")}</th>
+                    <th>{t("Status")}</th>
+                    <th>{t("Plaintext")}</th>
+                    <th>{t("Detail")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((record, index) => {
+                    const hex = String(record.plaintext_hex ?? "");
+                    const preview =
+                      hex.slice(0, PREVIEW_BYTES) + (hex.length > PREVIEW_BYTES ? "…" : "");
+                    return (
+                      <tr key={index}>
+                        <td className="text-text-faint">{Number(record.sequence)}</td>
+                        <td className="font-mono text-2xs text-text-muted">
+                          {String(record.content_type)}
+                        </td>
+                        <td>
+                          <Badge
+                            tone={DECRYPT_TONE[String(record.status)] ?? "unknown"}
+                          >
+                            {String(record.status)}
+                          </Badge>
+                        </td>
+                        <td className="font-mono text-2xs text-text">
+                          {preview || <span className="text-text-faint">—</span>}
+                        </td>
+                        <td className="text-2xs text-text-muted">
+                          {String(record.reason ?? "")}
+                          {record.cipher_suite_name ? (
+                            <span className="block text-text-faint">
+                              {String(record.cipher_suite_name)}
+                            </span>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+
+            <Caveat>{String(result.interpretation ?? "")}</Caveat>
+          </div>
+        ) : null}
+      </div>
+    </Panel>
+  );
+}
+
 export default function TlsPage() {
   const workspace = useWorkspace();
   const { t } = useI18n();
@@ -51,6 +305,15 @@ export default function TlsPage() {
       ? items.filter((item) => item.category !== "browser" && item.category !== "unknown")
       : items;
   }, [tls.data, nonBrowserOnly]);
+
+  // Streams a fingerprint was seen in are the ones a key log can be tried on.
+  const streamIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of fingerprints) {
+      for (const id of item.stream_ids ?? []) ids.add(id);
+    }
+    return [...ids].sort();
+  }, [fingerprints]);
 
   if (!captureId) {
     return (
@@ -224,6 +487,13 @@ export default function TlsPage() {
                 "A fingerprint names a client library or family, not a human or a piece of malware. The same library produces the same hash for legitimate and abusive traffic alike, so this table is a lead to investigate, never a verdict on its own.",
               )}
             </Caveat>
+
+            <KeyLogPanel projectId={workspace.projectId ?? ""} />
+
+            <DecryptPanel
+              projectId={workspace.projectId ?? ""}
+              streamIds={streamIds}
+            />
           </div>
         ) : null}
       </div>

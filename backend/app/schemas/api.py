@@ -403,6 +403,27 @@ class ExportProjectRequest(APIModel):
     include_reports: bool = True
 
 
+class KeyLogOut(APIModel):
+    """A key log reference.
+
+    Deliberately without the file's contents: a secret has no place in a
+    report or in a listing, so only what the log *carries* is reported.
+    """
+
+    id: str
+    project_id: str
+    name: str
+    sha256: str
+    size_bytes: int
+    line_count: int
+    labels: dict[str, int]
+    created_at: datetime
+
+
+class DecryptRequest(APIModel):
+    keylog_id: str
+
+
 class PcapngExportRequest(APIModel):
     comment_prefix: str = Field(default="mplab", max_length=64)
     include_hypotheses: bool = True

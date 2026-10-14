@@ -102,10 +102,24 @@ value is seeded, cached or estimated.
 | GET | `/streams/{stream_id}/framing-suggestions` | Candidate framing rules with scores |
 | GET | `/streams/{stream_id}/field-statistics` | Per-offset statistics and candidates |
 | GET | `/streams/{stream_id}/tls` | JA3 / JA3S fingerprints |
+| POST | `/streams/{stream_id}/decrypt` | Decrypt application records with a key log (body: `keylog_id`) |
 | POST | `/streams/{stream_id}/compare` | Compare several messages offset by offset |
 
 `/bytes` returns `holes` with a `reason` for each gap (`missing_segments`).
 Missing bytes are never replaced with zeros.
+
+## Key logs
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/projects/{project_id}/keylogs` | Upload one SSLKEYLOGFILE (multipart `file`) |
+| GET | `/projects/{project_id}/keylogs` | Key logs of a project, with the labels they carry |
+| DELETE | `/projects/{project_id}/keylogs/{keylog_id}` | Remove the record and the stored file |
+
+`POST` stores the file under a server-generated name with owner-only
+permissions and records its SHA-256; the response reports the labels and counts
+the file carries, never its contents. `DELETE` deletes only inside the project's
+own key log directory.
 
 ## Hypotheses and interpretations
 

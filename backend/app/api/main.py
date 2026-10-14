@@ -34,6 +34,7 @@ from .routers import (
     hypotheses,
     interpret,
     jobs,
+    keylogs,
     projects,
     reports,
     security,
@@ -103,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(captures.router, prefix="/api", tags=["captures"])
     app.include_router(sessions.router, prefix="/api", tags=["sessions"])
     app.include_router(streams.router, prefix="/api", tags=["streams"])
+    app.include_router(keylogs.router, prefix="/api", tags=["keylogs"])
     app.include_router(hypotheses.router, prefix="/api", tags=["hypotheses"])
     app.include_router(interpret.router, prefix="/api", tags=["interpretations"])
     app.include_router(jobs.router, prefix="/api", tags=["jobs"])
