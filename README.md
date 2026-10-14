@@ -33,15 +33,22 @@ failing rather than quietly adjusted.
 | Network graph + centrality | working | `/api/network/graph` |
 | Protocol detection (HTTP/1.1, HTTP/2, TLS, MQTT, ...) | working | `/api/graph`, stream records |
 | TLS JA3/JA3S fingerprinting | working | `/api/streams/{id}/tls` |
+| TLS decryption from an uploaded key log | working (limited suites) | `/api/streams/{id}/decrypt` |
+| Key log management (upload / list / delete) | working | `/api/projects/{id}/keylogs` |
 | Investigation report (Markdown + JSON) | working | `/api/projects/{id}/reports` |
 | Typed NLP search (no LLM code execution) | working | `/api/assistant/query` |
 | Security Center with honest verdicts | working | `POST /api/security/check` |
+| Schema migrations (Alembic) | working | `backend/alembic` |
 | Anomaly detection (Isolation Forest) | **optional** | needs `scikit-learn` |
-| TLS decryption via `SSLKEYLOGFILE` | **not implemented** | see [Limitations](#known-limitations) |
 | Multi-user auth / remote mode | **not implemented** | see [Limitations](#known-limitations) |
 
 "optional" means the module reports itself unavailable rather than degrading
 silently. There are no placeholder buttons.
+
+TLS decryption works for the cipher suites listed in
+[docs/LIMITATIONS.md](docs/LIMITATIONS.md) (TLS 1.2 AES-GCM/CBC+HMAC, TLS 1.3
+AES-GCM/ChaCha20-Poly1305) and only from a key log the operator uploads. Any
+record that cannot be opened says so; none is ever approximated.
 
 ---
 
@@ -105,18 +112,23 @@ because it cannot inspect the container's port mapping from inside.
 ## Verify the installation
 
 ```bash
-# Backend: 172 tests covering reassembly, framing, interpretation, security, examples
-.venv/bin/python -m pytest backend -q
+# Backend: 201 tests covering reassembly, framing, interpretation, security,
+# examples, TLS fingerprinting *and* TLS decryption, migrations
+python -m pytest backend -q
 
-# Frontend: 57 tests over hex rendering, tables, graph, pages and formatting, plus lint and types
+# Frontend: 103 tests over hex rendering, tables, graph, pages, localization and
+# formatting, plus lint and types
 cd frontend && npm test && npm run typecheck && npm run lint
 
 # End-to-end demonstration against an in-process client (17 steps)
-.venv/bin/python scripts/demo_scenario.py
+python scripts/demo_scenario.py
+
+# Recover the bundled third-party protocol from its bytes
+python scripts/explore_sample_protocol.py
 
 # End-to-end demonstration against a running server
-.venv/bin/python -m app &
-.venv/bin/python scripts/live_check.py
+python -m app &
+python scripts/live_check.py
 ```
 
 `demo_scenario.py` is the judge-facing script: it walks the entire researcher
