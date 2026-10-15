@@ -252,7 +252,11 @@ function CorpusTooSmall({ failure, projectId }: { failure: ApiError; projectId: 
           available: available.toLocaleString("ru-RU"),
           required: required.toLocaleString("ru-RU"),
         });
-  const benchHref = `/protocol-bench?project=${encodeURIComponent(projectId)}`;
+  // The workbench route is /workbench, and it reads the *session* from the query
+// string, not the project - which is what the sidebar link uses too. Inventing a
+// route here produced a 404 on the one page that exists to tell the analyst what
+// to do next.
+const benchHref = "/workbench";
 
   return (
     <div className="space-y-2 border-t border-line p-3 text-2xs">

@@ -4,7 +4,7 @@
 # Backend - 370 tests (test_api_docs.py keeps docs/API.md honest; test_dependencies.py keeps pyproject honest; test_prose_localization.py keeps the Russian catalogue honest)
 python -m pytest backend -q
 
-# Frontend - 147 tests
+# Frontend - 161 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -111,6 +111,7 @@ longer reproduces the models.
 | `frontend/tests/russian-plurals.test.ts` | Russian counted nouns take one / two / five forms, including the 11-14 case |
 | `frontend/tests/russian-no-english-words.test.ts` | No unexplained Latin word survives inside a Russian translation |
 | `frontend/tests/assistant-suggestions.test.tsx` | Clicking a suggestion puts the language on screen into the query box |
+| `frontend/tests/internal-links.test.ts` | Every internal href resolves to a page that exists, and passes the parameter the target reads |
 
 ## The test bench
 
