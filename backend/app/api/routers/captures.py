@@ -43,9 +43,23 @@ def analyze_capture(
     capture_id: str, payload: AnalyzeRequest, session: SessionDep, storage: StorageDep
 ) -> dict:
     """Index packets, split sessions, reassemble streams and frame messages."""
+    from ...analyzers.framing import FramingConfig
     from ...core.config import get_settings
+    from ...core.errors import SemanticValidationFailed
 
     settings = get_settings()
+
+    # The framing rule is validated before anything is written and before the
+    # capture is marked "running". An unusable rule is a bad request, not an
+    # internal error: it used to surface as HTTP 500 halfway through, leaving
+    # the capture marked failed and the analyst with a stack trace and no idea
+    # which option was wrong.
+    if payload.framing is not None:
+        try:
+            FramingConfig.parse(payload.framing)
+        except ValueError as exc:
+            raise SemanticValidationFailed(f"framing rule rejected: {exc}") from exc
+
     capture = load_capture(session, capture_id)
     capture.analysis_status = "running"
     session.commit()

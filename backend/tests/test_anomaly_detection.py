@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from app.analyzers.anomaly_detection import (
+    MIN_TRAINING_SAMPLES_PROFILE,
     build_matrix,
     explain,
     message_features,
@@ -193,6 +194,9 @@ def test_train_refuses_too_few_samples_instead_of_guessing(client, project, benc
         json={"name": "too-small", "capture_ids": [capture["id"]], "scope": "messages"},
     )
     assert refused.status_code == 400
-    assert "At least 50 samples" in refused.json()["error"]["message"]
+    message = refused.json()["error"]["message"]
+    # Both numbers, and which detector's floor was not reached.
+    assert "only 5 were available" in message
+    assert str(MIN_TRAINING_SAMPLES_PROFILE) in message
 
 

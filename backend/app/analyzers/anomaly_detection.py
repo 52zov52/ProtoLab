@@ -13,9 +13,23 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Sequence
 
-ANOMALY_VERSION = "anomaly-detection/1.2"
+from .. import prose
+
+ANOMALY_VERSION = "anomaly-detection/1.3"
 PROFILE_VERSION = "robust-profile/1.0"
-MIN_TRAINING_SAMPLES = 50
+
+# Each detector declares the corpus it can honestly be trained on.
+#
+# An Isolation Forest partitions a random forest and is only stable from a few
+# dozen samples upward; sklearn's own guidance is several hundred. A robust
+# profile is a median and a median absolute deviation per feature, which is a
+# real estimate from a much smaller sample - noisier, but not meaningless. One
+# shared floor of 50 therefore either refused corpora the profile could handle, or
+# (the alternative) lowered the bar for the forest, which is the wrong way round.
+MIN_TRAINING_SAMPLES_FOREST = 50
+MIN_TRAINING_SAMPLES_PROFILE = 20
+# Kept for callers that do not care which detector they get.
+MIN_TRAINING_SAMPLES = MIN_TRAINING_SAMPLES_FOREST
 
 
 @dataclass
@@ -137,10 +151,10 @@ def train_isolation_forest(
     import numpy as np
     from sklearn.ensemble import IsolationForest
 
-    if len(dataset) < MIN_TRAINING_SAMPLES:
+    if len(dataset) < MIN_TRAINING_SAMPLES_FOREST:
         raise ValueError(
-            f"At least {MIN_TRAINING_SAMPLES} samples are needed to train a stable "
-            f"model; only {len(dataset)} were available."
+            f"At least {MIN_TRAINING_SAMPLES_FOREST} samples are needed to train a "
+            f"stable Isolation Forest; only {len(dataset)} were available."
         )
     matrix = np.asarray(dataset.rows, dtype=float)
     model = IsolationForest(
@@ -155,6 +169,10 @@ def train_isolation_forest(
         "sample_count": int(matrix.shape[0]),
         "feature_count": int(matrix.shape[1]),
         "feature_names": dataset.names,
+        # The forest does not compute a constant-feature list, so the warning
+        # that names one cannot fire here; the key stays for a reader that
+        # assumes every summary has the same shape.
+        "constant_features": [],
         "contamination": contamination,
         "n_estimators": n_estimators,
         "seed": seed,
@@ -167,11 +185,7 @@ def train_isolation_forest(
         "score_std": float(np.std(inlier_scores)),
         "expected_outlier_fraction": float(contamination),
         "skipped": dataset.skipped,
-        "interpretation": (
-            "Scores are relative outlier measures within this baseline corpus. A "
-            "higher score means 'less typical than the training data'. It is not a "
-            "probability of compromise and carries no severity ranking."
-        ),
+        "interpretation": prose.SCORE_INTERPRETATION_FOREST,
         "warnings": _warnings(dataset, matrix, "isolation_forest"),
     }
     return TrainedModel(
@@ -190,7 +204,11 @@ def train_isolation_forest(
 
 
 def train_robust_profile(
-    dataset: FeatureSet, *, contamination: float, seed: int
+    dataset: FeatureSet,
+    *,
+    contamination: float,
+    seed: int,
+    corpus_note: str | None = None,
 ) -> TrainedModel:
     """Train a baseline that needs nothing but numpy.
 
@@ -215,10 +233,11 @@ def train_robust_profile(
 
     import numpy as np
 
-    if len(dataset) < MIN_TRAINING_SAMPLES:
+    if len(dataset) < MIN_TRAINING_SAMPLES_PROFILE:
         raise ValueError(
-            f"At least {MIN_TRAINING_SAMPLES} samples are needed to train a stable "
-            f"model; only {len(dataset)} were available."
+            f"At least {MIN_TRAINING_SAMPLES_PROFILE} samples are needed to train a "
+            f"robust profile; only {len(dataset)} were available. Add captures to the "
+            f"corpus, or score the sessions of the same project instead."
         )
     matrix = np.asarray(dataset.rows, dtype=float)
     median = np.median(matrix, axis=0)
@@ -246,6 +265,10 @@ def train_robust_profile(
         "sample_count": int(matrix.shape[0]),
         "feature_count": int(matrix.shape[1]),
         "feature_names": dataset.names,
+        # Also in params, because the CONSTANT_FEATURES warning names these and
+        # the reader gets the warning from the summary - a warning pointing at a
+        # value the summary does not carry renders as an empty list.
+        "constant_features": constant,
         "contamination": contamination,
         "algorithm": "robust_profile",
         "score_min": float(np.min(distances)),
@@ -255,14 +278,10 @@ def train_robust_profile(
         "score_threshold": threshold,
         "expected_outlier_fraction": float(contamination),
         "skipped": dataset.skipped,
-        "interpretation": (
-            "The score is a distance from the baseline profile, measured in robust "
-            "units per feature and averaged. A higher score means 'further from what "
-            "this corpus usually looks like'. It is not a probability of compromise, "
-            "carries no severity ranking, and is only comparable within this one "
-            "baseline."
+        "interpretation": prose.SCORE_INTERPRETATION_PROFILE,
+        "warnings": _warnings(
+            dataset, matrix, "robust_profile", corpus_note=corpus_note
         ),
-        "warnings": _warnings(dataset, matrix, "robust_profile"),
     }
     return TrainedModel(
         blob=pickle.dumps(profile, protocol=pickle.HIGHEST_PROTOCOL),
@@ -287,13 +306,18 @@ def train_baseline(
     seed: int,
     algorithm: str = "auto",
 ) -> TrainedModel:
-    """Train with the best detector this installation can run.
+    """Train with the best detector this *corpus* can honestly support.
 
-    ``auto`` prefers Isolation Forest and falls back to the numpy profile, which
-    is what makes the feature work in a plain install. Asking for
-    ``isolation_forest`` explicitly fails loudly instead of silently training a
-    different model than the one that was requested.
+    Two things decide it: what the installation can run, and how much data there
+    is. ``auto`` prefers the Isolation Forest, and drops to the robust profile
+    when the corpus is too small for a forest — reporting which one was used and
+    why, because "the tab works" must not come at the price of a score nobody can
+    trace.
+
+    Asking for ``isolation_forest`` explicitly still fails loudly rather than
+    quietly training a different model than the one that was requested.
     """
+    count = len(dataset)
     if algorithm == "isolation_forest":
         if not sklearn_available():
             raise ValueError(
@@ -309,14 +333,31 @@ def train_baseline(
         )
     if algorithm == "robust_profile":
         return train_robust_profile(dataset, contamination=contamination, seed=seed)
-    if sklearn_available():
+
+    if sklearn_available() and count >= MIN_TRAINING_SAMPLES_FOREST:
         return train_isolation_forest(
             dataset,
             contamination=contamination,
             n_estimators=n_estimators,
             seed=seed,
         )
-    return train_robust_profile(dataset, contamination=contamination, seed=seed)
+    small_corpus = count < MIN_TRAINING_SAMPLES_FOREST and sklearn_available()
+    model = train_robust_profile(
+        dataset,
+        contamination=contamination,
+        seed=seed,
+        corpus_note=prose.SMALL_CORPUS_FALLBACK if small_corpus else None,
+    )
+    if small_corpus:
+        # Say out loud why the better detector was not used, instead of leaving
+        # the analyst to wonder why the scores are noisy. A code rather than a
+        # sentence, so the UI can say it in the reader's language; the wording
+        # lives in app/prose.py and the UI fills the placeholders.
+        model.summary["forest_unavailable_reason"] = "insufficient_samples"
+        model.summary["forest_required_samples"] = MIN_TRAINING_SAMPLES_FOREST
+    elif not sklearn_available():
+        model.summary["forest_unavailable_reason"] = "no_scikit_learn"
+    return model
 
 
 def _score_profile(
@@ -412,31 +453,44 @@ def explain(entity_features: dict[str, float], dataset_mean: dict[str, float]) -
     return out
 
 
-def _warnings(dataset: FeatureSet, matrix, algorithm: str) -> list[str]:
+def _warnings(
+    dataset: FeatureSet,
+    matrix,
+    algorithm: str,
+    *,
+    corpus_note: str | None = None,
+) -> list[str]:
+    """What the analyst must be told about this baseline.
+
+    ``corpus_note`` is the caller's more specific statement about a small
+    corpus - it replaces the generic one rather than joining it, because two
+    near-identical warnings read as two separate problems.
+    """
     import numpy as np
 
     warnings: list[str] = []
-    if matrix.shape[0] < 500:
-        warnings.append(
-            f"Only {matrix.shape[0]} training samples were available. A stable baseline "
-            "needs several hundred; treat these scores as noisy."
-        )
+    count = int(matrix.shape[0])
+    # The count is *not* interpolated into the sentence. Warnings travel to a
+    # Russian UI, where the wording is a translation; a sentence with a number
+    # baked in cannot be matched against a catalogue. The count travels beside
+    # it in summary["sample_count"] and the caller fills the placeholder.
+    if corpus_note is not None:
+        warnings.append(corpus_note)
+    elif count < 500:
+        warnings.append(prose.SMALL_CORPUS_FOREST)
     constant = [
         name
         for index, name in enumerate(dataset.names)
         if float(np.std(matrix[:, index])) == 0.0
     ]
     if constant:
-        warnings.append(
-            f"These features were constant across the baseline corpus and carry no "
-            f"information: {constant}."
-        )
-    if algorithm == "robust_profile":
-        warnings.append(
-            "This baseline was trained without scikit-learn, so it uses a robust "
-            "per-feature profile (median and MAD) instead of an Isolation Forest. "
-            "Install the 'analytics' extra to train the forest model instead."
-        )
+        warnings.append(prose.CONSTANT_FEATURES)
+    if algorithm == "robust_profile" and not sklearn_available():
+        # Only when scikit-learn is genuinely absent. Saying otherwise because
+        # the corpus happened to be too small would blame the deployment for
+        # the corpus, and send the analyst to install a package they already
+        # have - which is exactly what happened on a 24-message corpus.
+        warnings.append(prose.NO_FOREST_WARNING)
     return warnings
 
 
@@ -458,6 +512,14 @@ def sklearn_available() -> bool:
         return False
 
 
-def active_algorithm() -> str:
-    """Which detector a default training run would use in this installation."""
-    return "isolation_forest" if sklearn_available() else "robust_profile"
+def active_algorithm(sample_count: int | None = None) -> str:
+    """Which detector a default training run would use here.
+
+    With a sample count it also answers the question the analyst actually has:
+    "would my corpus train the forest, or the fallback?"
+    """
+    if not sklearn_available():
+        return "robust_profile"
+    if sample_count is not None and sample_count < MIN_TRAINING_SAMPLES_FOREST:
+        return "robust_profile"
+    return "isolation_forest"

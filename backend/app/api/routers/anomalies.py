@@ -7,7 +7,10 @@ from typing import Any
 from fastapi import APIRouter
 from sqlalchemy import select
 
+from ... import prose
 from ...analyzers.anomaly_detection import (
+    MIN_TRAINING_SAMPLES_FOREST,
+    MIN_TRAINING_SAMPLES_PROFILE,
     FeatureSet,
     active_algorithm,
     build_matrix,
@@ -32,24 +35,23 @@ def status() -> dict[str, Any]:
     """What this installation can actually train and score.
 
     Anomaly detection always works: with scikit-learn present the baseline is an
-    Isolation Forest, and without it a robust per-feature profile. Which one is
-    in use is reported here rather than inferred from a disabled tab.
+    Isolation Forest, and without it - or on a corpus too small for a forest - a
+    robust per-feature profile. Which one applies is reported here rather than
+    inferred from a disabled tab, and the sample floors are reported with it so
+    the analyst can see why.
     """
     forest = sklearn_available()
-    algorithm = active_algorithm()
     return {
         "available": True,
-        "algorithm": algorithm,
+        "algorithm": active_algorithm(),
         "sklearn_installed": forest,
-        "availability_note": (
-            "scikit-learn is installed, so a baseline is trained as an Isolation "
-            "Forest."
-            if forest
-            else "scikit-learn is not installed in this deployment, so a baseline is "
-            "trained as a robust per-feature profile (median and MAD). Scores are "
-            "distances from that profile rather than forest scores; install the "
-            "'analytics' extra for the Isolation Forest."
-        ),
+        "min_samples": {
+            "isolation_forest": MIN_TRAINING_SAMPLES_FOREST,
+            "robust_profile": MIN_TRAINING_SAMPLES_PROFILE,
+        },
+        "availability_note": prose.AVAILABILITY_FOREST
+        if forest
+        else prose.AVAILABILITY_PROFILE,
     }
 
 

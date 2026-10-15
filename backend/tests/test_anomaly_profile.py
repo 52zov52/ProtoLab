@@ -20,9 +20,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from app import prose
 from app.analyzers import anomaly_detection as ad
 
-MIN_SAMPLES = ad.MIN_TRAINING_SAMPLES
+MIN_SAMPLES = ad.MIN_TRAINING_SAMPLES_FOREST
+MIN_SAMPLES_PROFILE = ad.MIN_TRAINING_SAMPLES_PROFILE
 
 
 # --------------------------------------------------------------------------- #
@@ -117,15 +119,16 @@ def test_a_constant_feature_is_neutral_rather_than_infinite(without_sklearn):
     assert all(np.isfinite(row["score"]) for row in ranked)
     assert ranked[0]["entity_id"] == "m0"
     # A feature that never varies is reported as carrying no information.
-    assert any("entropy" in warning for warning in model.summary["warnings"])
+    assert any("{features}" in warning for warning in model.summary["warnings"])
 
 
 def test_too_few_samples_is_refused_with_both_numbers_in_the_message(without_sklearn):
+    """Below the profile's own floor the request is still refused, with numbers."""
     dataset = corpus(count=10)
     with pytest.raises(ValueError) as excinfo:
         train(dataset)
     message = str(excinfo.value)
-    assert str(MIN_SAMPLES) in message
+    assert str(MIN_SAMPLES_PROFILE) in message
     assert "10" in message
 
 
@@ -140,9 +143,65 @@ def test_asking_for_the_forest_explicitly_fails_instead_of_silently_switching(
 def test_auto_picks_the_forest_when_it_is_available(monkeypatch):
     monkeypatch.setattr(ad, "sklearn_available", lambda: True)
     model = ad.train_baseline(
-        corpus(), contamination=0.05, n_estimators=100, seed=42, algorithm="auto"
+        corpus(count=MIN_SAMPLES + 10),
+        contamination=0.05,
+        n_estimators=100,
+        seed=42,
+        algorithm="auto",
     )
     assert model.params["algorithm"] == "isolation_forest"
+
+
+def test_a_corpus_too_small_for_a_forest_trains_the_profile_and_says_why(monkeypatch):
+    """The case an analyst actually hits: scikit-learn present, corpus under 50.
+
+    This used to be a dead end - "only 24 were available" and nothing to do
+    about it. Now the corpus trains what it can honestly support, and the reason
+    the better detector was skipped is stated rather than implied.
+    """
+    monkeypatch.setattr(ad, "sklearn_available", lambda: True)
+    small = corpus(count=28, planted=2)
+
+    model = ad.train_baseline(
+        small, contamination=0.1, n_estimators=100, seed=42, algorithm="auto"
+    )
+
+    assert model.params["algorithm"] == "robust_profile"
+    # A machine-readable reason plus the counts, not a sentence: the UI renders
+    # it in the reader's language and supplies the numbers itself.
+    assert model.summary["forest_unavailable_reason"] == "insufficient_samples"
+    assert model.summary["sample_count"] == 28
+    assert model.summary["forest_required_samples"] == MIN_SAMPLES
+    assert any("{count}" in warning for warning in model.summary["warnings"])
+    # ...and the fallback still does its job on that corpus.
+    ranked = ad.score(model.blob, small)
+    assert {row["entity_id"] for row in ranked[:2]} == {"m0", "m1"}
+
+
+def test_the_status_endpoint_reports_the_floor_of_each_detector(
+    without_sklearn, client
+):
+    payload = client.get("/api/anomalies/status").json()
+    assert payload["min_samples"] == {
+        "isolation_forest": MIN_SAMPLES,
+        "robust_profile": MIN_SAMPLES_PROFILE,
+    }
+    # The note names the detector this deployment would use, so the reason a
+    # score looks the way it does is readable without opening the code.
+    note = payload["availability_note"]
+    assert "robust per-feature profile" in note
+    assert payload["sklearn_installed"] is False
+
+
+def test_the_status_note_states_the_forest_floor_when_it_can_be_used(client):
+    """With scikit-learn present the note says how big a corpus must be."""
+    if not ad.sklearn_available():
+        pytest.skip("this installation has no scikit-learn, so the branch is unreachable")
+    payload = client.get("/api/anomalies/status").json()
+    assert payload["sklearn_installed"] is True
+    assert payload["algorithm"] == "isolation_forest"
+    assert payload["availability_note"] == prose.AVAILABILITY_FOREST
+    assert str(MIN_SAMPLES) in payload["availability_note"]
 
 
 def test_the_summary_states_what_the_score_is_not(without_sklearn):
