@@ -459,6 +459,8 @@ export const RU_MESSAGES: Record<string, string> = {
     "Ассистент отказался угадывать. Сузьте запрос до одного из поддерживаемых шаблонов или используйте структурированный API запросов.",
   "Dry run: the plan was compiled and validated but not executed.":
     "Пробный запуск: план запроса скомпилирован и проверен, но не выполнен.",
+  "This was a dry run, so nothing was executed and there are no results to describe. Untick the dry run and ask again for an answer about the traffic.":
+    "Это был пробный запуск: ничего не выполнялось, поэтому описывать нечего. Снимите галочку пробного запуска и повторите вопрос — тогда будет ответ о трафике.",
   "External AI is disabled. Set MPLAB_ALLOW_EXTERNAL_AI=true and point MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL at an endpoint (or run a local Ollama) to permit an optional narration pass.":
     "Внешний ИИ выключен. Задайте MPLAB_ALLOW_EXTERNAL_AI=true и укажите эндпоинт в MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL (либо запустите локальный Ollama), чтобы разрешить необязательный проход с формулировками.",
   "The request is empty.": "Запрос пуст.",
@@ -496,6 +498,8 @@ export const RU_MESSAGES: Record<string, string> = {
   "scikit-learn is not installed in this deployment, so the robust profile is used.":
     "scikit-learn не установлен в этом развёртывании, поэтому используется устойчивый профиль.",
   "corpus too small": "корпус слишком мал",
+  "A dry run executes nothing, so there is nothing for the model to describe. Untick the dry run for an answer.":
+    "Пробный запуск ничего не выполняет, поэтому модели нечего описывать. Снимите галочку пробного запуска, чтобы получить ответ.",
   "{available} of {required} {scope}": "{available} из {required} {scope}",
   "{available} of {required} messages": "{available} из {required} сообщений",
   "{available} of {required} sessions": "{available} из {required} сессий",

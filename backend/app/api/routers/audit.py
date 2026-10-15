@@ -5,10 +5,12 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Response
+from pydantic import Field
 from sqlalchemy import func, select
 
 from ...core.errors import NotFound
 from ...models import AuditEvent as AuditEventRow
+from ...schemas.api import APIModel
 from ..context import SessionDep
 
 router = APIRouter(prefix="/audit")
@@ -132,17 +134,30 @@ def export_events(session: SessionDep, limit: Annotated[int, Query(ge=1, le=10_0
     )
 
 
-@router.get("/actions")
-def known_actions() -> dict[str, str]:
+class KnownActionsOut(APIModel):
+    """The audit vocabulary, as a schema the client can rely on.
+
+    Declared rather than left to `dict[str, str]`: the payload nests a mapping
+    under "actions", so the old annotation promised every value was a string and
+    FastAPI rejected the real response - this endpoint answered 500 for everyone,
+    every time.
+    """
+
+    actions: dict[str, str] = Field(description="Event type to its severity.")
+    note: str = ""
+
+
+@router.get("/actions", response_model=KnownActionsOut)
+def known_actions() -> KnownActionsOut:
     from ...core.logging import SENSITIVE_ACTIONS
 
-    return {
-        "actions": SENSITIVE_ACTIONS,
-        "note": (
+    return KnownActionsOut(
+        actions=dict(SENSITIVE_ACTIONS),
+        note=(
             "These are the security-relevant event types the application records. "
             "Ordinary read operations are not audited."
         ),
-    }
+    )
 
 
 _ = NotFound

@@ -138,6 +138,11 @@ REFUSED_TO_GUESS = (
 
 DRY_RUN_NOTE = "Dry run: the plan was compiled and validated but not executed."
 
+LLM_NO_RESULTS_REASON = (
+    "This was a dry run, so nothing was executed and there are no results to "
+    "describe. Untick the dry run and ask again for an answer about the traffic."
+)
+
 LLM_DISABLED_REASON = (
     "External AI is disabled. Set MPLAB_ALLOW_EXTERNAL_AI=true and "
     "point MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL at "
@@ -225,6 +230,7 @@ ALL: tuple[str, ...] = (
     FRAMING_DISCLAIMER,
     REFUSED_TO_GUESS,
     DRY_RUN_NOTE,
+    LLM_NO_RESULTS_REASON,
     LLM_DISABLED_REASON,
     EMPTY_QUERY,
     UNSUPPORTED_QUERY,

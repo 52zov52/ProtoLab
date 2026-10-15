@@ -134,6 +134,16 @@ export default function AssistantPage() {
                   />
                   {t("allow optional local model narration")}
                 </label>
+                {/* Stated here rather than discovered afterwards: a dry run never
+                    executes, so the model has no results to describe. Asking for
+                    both used to look accepted and produce nothing. */}
+                {useLlm && dryRun && (
+                  <span className="text-2xs text-status-warn">
+                    {t(
+                      "A dry run executes nothing, so there is nothing for the model to describe. Untick the dry run for an answer.",
+                    )}
+                  </span>
+                )}
                 <button
                   type="button"
                   className="btn btn-primary ml-auto"

@@ -128,7 +128,16 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
         "result": result,
     }
     if payload.use_llm:
-        if not settings.allow_external_ai:
+        if payload.dry_run:
+            # A dry run does not execute the plan, so there is nothing to
+            # narrate: the model would be describing a search that never ran and
+            # its answer could not be checked against any result. Saying so is
+            # better than an empty panel that looks like a broken endpoint.
+            response["llm"] = {
+                "used": False,
+                "reason": prose.LLM_NO_RESULTS_REASON,
+            }
+        elif not settings.allow_external_ai:
             response["llm"] = {
                 "used": False,
                 "reason": (

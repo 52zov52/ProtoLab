@@ -41,37 +41,6 @@ export default function StreamsPage() {
     [sessionId, workspace.revision],
   );
 
-  const messages = useAsync(
-    () =>
-      streamId
-        ? api.listMessages(
-            (workspace.captureId as string) ?? "",
-            `?stream_id=${streamId}&limit=200`,
-          )
-        : Promise.resolve(null),
-    [streamId, workspace.captureId, workspace.revision],
-  );
-
-  const bytes = useAsync(
-    () =>
-      streamId
-        ? api.streamBytes(streamId, offset, WINDOW)
-        : Promise.resolve(null),
-    [streamId, offset],
-  );
-
-  const suggestions = useAsync(
-    () => (streamId ? api.framingSuggestions(streamId) : Promise.resolve(null)),
-    [streamId, workspace.revision],
-  );
-
-  const tls = useAsync(
-    () => (streamId ? api.tlsFingerprints(streamId) : Promise.resolve(null)),
-    [streamId, workspace.revision],
-  );
-
-  const apply = useAction();
-
   // Protocol labels present in this session, and the ones the analyst chose to
   // hide. Hiding removes the stream from the selector; it never deletes data.
   const protocolLabels = useMemo(() => {
@@ -85,6 +54,20 @@ export default function StreamsPage() {
     [streams.data, protocolFilter],
   );
 
+  /**
+   * The stream to ask the server about - only ever one this session actually has.
+   *
+   * `workspace.streamId` is remembered across visits, so it can name a stream of
+   * a capture that is no longer selected. The correcting effect below fixes it,
+   * but it runs *after* render, so the four requests below used to be sent with
+   * the stale id first and the page greeted the analyst with "Stream ... does not
+   * exist". Validation happens before the requests now, not after them.
+   */
+  const activeStreamId =
+    streamId && (streams.data ?? []).some((s) => s.id === streamId)
+      ? streamId
+      : null;
+
   useEffect(() => {
     if (visibleStreams.length === 0) return;
     if (!visibleStreams.some((s) => s.id === streamId)) {
@@ -95,7 +78,40 @@ export default function StreamsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleStreams, streamId]);
 
-  const stream = streams.data?.find((s) => s.id === streamId) ?? null;
+  const messages = useAsync(
+    () =>
+      activeStreamId
+        ? api.listMessages(
+            (workspace.captureId as string) ?? "",
+            `?stream_id=${activeStreamId}&limit=200`,
+          )
+        : Promise.resolve(null),
+    [activeStreamId, workspace.captureId, workspace.revision],
+  );
+
+  const bytes = useAsync(
+    () =>
+      activeStreamId
+        ? api.streamBytes(activeStreamId, offset, WINDOW)
+        : Promise.resolve(null),
+    [activeStreamId, offset],
+  );
+
+  const suggestions = useAsync(
+    () =>
+      activeStreamId ? api.framingSuggestions(activeStreamId) : Promise.resolve(null),
+    [activeStreamId, workspace.revision],
+  );
+
+  const tls = useAsync(
+    () =>
+      activeStreamId ? api.tlsFingerprints(activeStreamId) : Promise.resolve(null),
+    [activeStreamId, workspace.revision],
+  );
+
+  const apply = useAction();
+
+  const stream = streams.data?.find((s) => s.id === activeStreamId) ?? null;
   const holes = useMemo(
     () =>
       ((bytes.data?.holes ?? []) as { start: number; end: number; length: number; reason: string }[]) ?? [],
