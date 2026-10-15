@@ -96,6 +96,7 @@ def create_report(
                     result_summary=report.facts,
                     limits=settings.limits,
                     settings=settings,
+                    locale=payload.locale,
                 )
                 report.ai_used = True
                 report.ai_model = result["provider"]

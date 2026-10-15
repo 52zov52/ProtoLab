@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from ... import prose
 from ...schemas import InterpretationCreate, InterpretationOut, InterpretationUpdate, ValidationRequest
 from ..context import SessionDep, StorageDep, load_project
 
@@ -96,11 +97,7 @@ def get_counterexamples_global(run_id: str, session: SessionDep, storage: Storag
         "run_id": run_id,
         "count": len(examples),
         "counterexamples": examples,
-        "disclaimer": (
-            "A counterexample shows where the rule did not hold on this corpus. "
-            "It does not by itself prove the rule is wrong; a gap in the capture is "
-            "an equally valid explanation until ruled out."
-        ),
+        "disclaimer": prose.COUNTEREXAMPLE_DISCLAIMER,
     }
 
 

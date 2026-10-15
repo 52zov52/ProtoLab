@@ -390,6 +390,9 @@ class AssistantQuery(APIModel):
     capture_ids: list[str] = Field(default_factory=list, max_length=64)
     dry_run: bool = True
     use_llm: bool = False
+    # The interface's language, so a narration is written in the language the
+    # analyst is reading rather than in whatever the model defaults to.
+    locale: str | None = Field(default=None, max_length=8)
 
 
 class ReportRequest(APIModel):
@@ -397,6 +400,7 @@ class ReportRequest(APIModel):
     capture_ids: list[str] = Field(default_factory=list, max_length=64)
     interpretation_ids: list[str] = Field(default_factory=list, max_length=32)
     use_llm: bool = False
+    locale: str | None = Field(default=None, max_length=8)
 
 
 class ExportProjectRequest(APIModel):

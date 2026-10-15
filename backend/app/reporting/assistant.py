@@ -22,6 +22,8 @@ from typing import Any, Literal, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .. import prose
+
 from ..analyzers.byte_analysis import shannon_entropy
 from ..interpretation.engine import SpecError, parse_spec
 from ..interpretation.extractor import extract_jwt_claims
@@ -182,23 +184,74 @@ class CompiledQuery:
 
 _NUMBER = r"(-?\d+(?:\.\d+)?)"
 _UNITS = {"kb": 1024, "kib": 1024, "mb": 1024 * 1024, "mib": 1024 * 1024, "b": 1, "byte": 1, "bytes": 1}
+#: Russian unit spellings, and the Russian short forms (кб, байт, байта, байт).
+_UNITS.update(
+    {
+        "кб": 1024,
+        "кбайт": 1024,
+        "киб": 1024,
+        "мб": 1024 * 1024,
+        "мбайт": 1024 * 1024,
+        "миб": 1024 * 1024,
+        "б": 1,
+        "байт": 1,
+        "байта": 1,
+        "байт ": 1,
+    }
+)
+_UNITS_RE = "|".join(sorted((re.escape(k) for k in _UNITS), key=len, reverse=True))
 
+#: Byte widths, written as digits or as words. "first two bytes" is how the
+#: question is actually asked; requiring digits meant the pattern matched almost
+#: nothing a person would type.
+_WIDTH_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8,
+    "одна": 1, "одну": 1, "один": 1,
+    "две": 2, "два": 2,
+    "три": 3, "четыре": 4, "пять": 5, "шесть": 6, "семь": 7, "восемь": 8,
+    # Beyond the 8-byte limit on purpose: the request must be *recognised* so it
+    # can be refused with the reason, not dismissed as unparseable.
+    "девять": 9, "девяти": 9, "десять": 10,
+}
+_WIDTH = r"(\d+|" + "|".join(sorted(_WIDTH_WORDS, key=len, reverse=True)) + r")"
+
+
+def _width_of(match: re.Match[str]) -> int:
+    """The byte width a phrase named, whether as a digit or as a word."""
+    for group in match.groups():
+        if group is None:
+            continue
+        token = group.lower()
+        if token.isdigit():
+            return int(token)
+        if token in _WIDTH_WORDS:
+            return _WIDTH_WORDS[token]
+    return 0
+
+# Ordered so that a negated phrase wins over the phrase inside it: "не больше 64"
+# contains "больше", and "не меньше 5" contains "меньше". Checking the inclusive
+# forms first is what keeps "no more than 100" from compiling to a strict ">".
 COMPARISON_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("greater_than", re.compile(rf"(?:longer than|greater than|more than|over|above|bigger than|exceeds?)\s+{_NUMBER}\s*(kb|kib|mb|mib|bytes?|b)?", re.I)),
-    ("greater_or_equal", re.compile(rf"(?:at least|no less than)\s+{_NUMBER}\s*(kb|kib|mb|mib|bytes?|b)?", re.I)),
-    ("less_than", re.compile(rf"(?:shorter than|less than|under|below|smaller than|fewer than)\s+{_NUMBER}\s*(kb|kib|mb|mib|bytes?|b)?", re.I)),
-    ("less_or_equal", re.compile(rf"(?:at most|no more than)\s+{_NUMBER}\s*(kb|kib|mb|mib|bytes?|b)?", re.I)),
+    ("greater_or_equal", re.compile(rf"(?:at least|no less than|не меньше|не менее|минимум)\s+{_NUMBER}\s*({_UNITS_RE})?", re.I)),
+    ("less_or_equal", re.compile(rf"(?:at most|no more than|не больше|не более|максимум)\s+{_NUMBER}\s*({_UNITS_RE})?", re.I)),
+    ("greater_than", re.compile(rf"(?:longer than|greater than|more than|over|above|bigger than|exceeds?|длиннее|больше|более|выше|свыше|превыша\w*)\s+{_NUMBER}\s*({_UNITS_RE})?", re.I)),
+    ("less_than", re.compile(rf"(?:shorter than|less than|under|below|smaller than|fewer than|короче|меньше|менее|ниже)\s+{_NUMBER}\s*({_UNITS_RE})?", re.I)),
 )
 
+# Entity and field words in both languages. The audience is Russian-speaking, so
+# an English-only vocabulary meant every request in their own language was
+# refused with "not mapped to a supported query" - a feature that appears broken
+# for exactly the people most likely to use it.
 RULES: tuple[tuple[str, re.Pattern[str], dict[str, Any]], ...] = (
-    ("messages", re.compile(r"\b(message|msg)s?\b", re.I), {"field": "payload_length"}),
-    ("messages", re.compile(r"\brequests?\b", re.I), {"field": "payload_length", "direction": "a2b"}),
-    ("messages", re.compile(r"\b(responses?|replies)\b", re.I), {"field": "payload_length", "direction": "b2a"}),
-    ("messages", re.compile(r"\bentropy\b", re.I), {"field": "entropy"}),
-    ("messages", re.compile(r"\bincomplete|partial\b", re.I), {"field": "complete", "value": False}),
-    ("sessions", re.compile(r"\bsessions?\b", re.I), {"field": "packet_count"}),
-    ("streams", re.compile(r"\bstream\b", re.I), {"field": "stream_length"}),
-    ("packets", re.compile(r"\bpackets?\b", re.I), {"field": "payload_length"}),
+    ("messages", re.compile(r"\b(message|msg)s?\b|сообщени\w*", re.I), {"field": "payload_length"}),
+    ("messages", re.compile(r"\brequests?\b|запрос\w*", re.I), {"field": "payload_length", "direction": "a2b"}),
+    ("messages", re.compile(r"\b(responses?|replies)\b|ответ\w*", re.I), {"field": "payload_length", "direction": "b2a"}),
+    ("messages", re.compile(r"\bentropy\b|энтропи\w*", re.I), {"field": "entropy"}),
+    ("messages", re.compile(r"\bincomplete|partial\b|неполн\w*|обрыв\w*", re.I), {"field": "complete", "value": False}),
+    ("sessions", re.compile(r"\bsessions?\b|сесси\w*", re.I), {"field": "packet_count"}),
+    ("streams", re.compile(r"\bstream\b|поток\w*", re.I), {"field": "stream_length"}),
+    ("packets", re.compile(r"\bpackets?\b|пакет\w*", re.I), {"field": "payload_length"}),
 )
 
 
@@ -212,7 +265,7 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
     warnings: list[str] = []
     lowered = text.strip()
     if not lowered:
-        raise CompileError("The request is empty.")
+        raise CompileError(prose.EMPTY_QUERY)
 
     entity = "messages"
     context: dict[str, Any] = {}
@@ -233,7 +286,11 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
         unit = (match.group(2) or "").lower()
         if unit:
             value *= _UNITS.get(unit, 1)
-        target = _size_field(lowered, entity)
+        # A threshold is applied to the field the question named. Entropy is the
+        # one case where "выше 7" or "above 7" is not a size, so honouring it
+        # here is what makes "messages with entropy above 7" mean what it says
+        # instead of compiling to payload_length > 7.
+        target = _named_field(lowered) or _size_field(lowered, entity)
         filters.append(
             QueryFilter(field=target, operator=operator, value=int(value))
         )
@@ -243,27 +300,51 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
     if not filters:
         # "first two bytes match" style requests.
         byte_match = re.search(
-            r"first\s+(\d+)\s+bytes?\s+(?:are\s+)?(?:the\s+same|match|identical|equal)", lowered, re.I
+            r"first\s+" + _WIDTH + r"\s+bytes?\s+(?:are\s+)?(?:the\s+same|match|identical|equal)"
+            rf"|(?:первы\w*|начальн\w*)\s+{_WIDTH}\s*(?:байт\w*)?\s+"
+            r"(?:совпад\w*|одинаков\w*|равны)"
+            # "одинаковыми начальными 4 байтами": the adjective comes first.
+            rf"|(?:одинаков\w*|совпад\w*)\s+(?:начальн\w*|перв\w*)\s+{_WIDTH}\s*байт\w*",
+            lowered,
+            re.I,
         )
         if byte_match:
-            width = int(byte_match.group(1))
+            width = _width_of(byte_match)
             if width < 1 or width > 8:
                 raise CompileError(
-                    "Only 1 to 8 leading bytes can be compared; a wider comparison needs "
-                    "a rule the assistant does not have."
+                    prose.WIDE_BYTE_COMPARISON
                 )
-            filters.append(QueryFilter(field="prefix_equals", operator="byte_equals_at", value=width))
+            # `byte_at`, not `prefix_equals`: the executor understands both
+            # operators, but the plan validator checks the *field* against the
+            # entity's real fields, and `prefix_equals` is an operator, not one.
+            # Naming it as the field made every leading-byte request fail
+            # validation - while the interface offered it as an example.
+            filters.append(QueryFilter(field="byte_at", operator="byte_equals_at", value=width))
             explanation.append(f"leading {width} byte(s) are equal across messages")
             warnings.append(
-                "This groups messages that share a leading byte pattern; it does not "
-                "assert that those bytes mean the same thing."
+                prose.LEADING_BYTES_NOT_MEANING
             )
         else:
-            gap_match = re.search(rf"within\s+{_NUMBER}\s*(ms|milliseconds?|s|seconds?)", lowered, re.I)
-            if gap_match and re.search(r"request|response|reply", lowered, re.I):
-                amount = float(gap_match.group(1))
-                unit = gap_match.group(2).lower()
-                seconds = amount / 1000.0 if unit.startswith("m") else amount
+            gap_match = re.search(
+                rf"within\s+{_NUMBER}\s*(ms|milliseconds?|s|seconds?)"
+                rf"|(?:в\s+течение|за|менее)\s+{_NUMBER}\s*"
+                r"(мс|мс\.|миллисекунд\w*|секунд\w*|с)",
+                lowered,
+                re.I,
+            )
+            if gap_match and re.search(
+                r"request|response|reply|запрос|ответ", lowered, re.I
+            ):
+                amount = float(gap_match.group(1) or gap_match.group(3))
+                unit = (gap_match.group(2) or gap_match.group(4)).lower()
+                # "мс" and "секунд" are milliseconds and seconds respectively;
+                # the English branch keys off the leading "m".
+                is_milliseconds = (
+                    unit.startswith("m")
+                    or unit.startswith("мс")
+                    or "миллисекунд" in unit
+                )
+                seconds = amount / 1000.0 if is_milliseconds else amount
                 filters.append(
                     QueryFilter(field="timestamp", operator="greater_or_equal", value=0)
                 )
@@ -271,15 +352,11 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
                     f"messages where a response followed a request within {seconds:.3f}s"
                 )
                 warnings.append(
-                    "Request/response pairing is inferred from ordering and direction "
-                    "only; no request identifier is checked."
+                    prose.PAIRING_BY_ORDER
                 )
             else:
                 raise CompileError(
-                    "The request could not be mapped to a supported query. Supported "
-                    "patterns include size comparisons ('responses longer than 1000 "
-                    "bytes'), leading-byte equality, request/response timing, and "
-                    "entropy thresholds."
+                    prose.UNSUPPORTED_QUERY
                 )
 
     for direction in ("a2b", "b2a"):
@@ -291,22 +368,19 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
         filters.append(QueryFilter(field="contains_text", operator="contains", value="POST "))
         explanation.append("payload contains the text 'POST '")
         warnings.append(
-            "A POST search only works when HTTP content is visible. It cannot find "
-            "requests inside TLS unless the session was decrypted."
+            prose.POST_NEEDS_PLAINTEXT
         )
 
     if re.search(r"\bjwt\b", lowered, re.I):
         filters.append(QueryFilter(field="jwt", operator="jwt_claim_equals", value=None))
         explanation.append("payloads that look like a JWT")
         warnings.append(
-            "JWT search runs only over plaintext payloads. Encrypted TLS payloads are "
-            "never scanned for tokens."
+            prose.JWT_SEARCH_NEEDS_PLAINTEXT
         )
 
     if re.search(r"\bunusually high (?:send|request) rate\b|high frequency", lowered, re.I):
         raise CompileError(
-            "Rate analysis is available through the Anomaly Detection module; it needs a "
-            "trained baseline rather than a single-pass filter."
+            prose.RATE_ANALYSIS_ELSEWHERE
         )
 
     try:
@@ -327,6 +401,19 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
         warnings=warnings,
         ambiguous=False,
     )
+
+
+def _named_field(text: str) -> str | None:
+    """The comparison field the question named, when it named one.
+
+    Only entropy qualifies. Everything else falls through to the entity's size
+    field, which is what the size wording implies: "messages longer than 1000
+    bytes" is about payload length even though the word "message" also matches a
+    length field.
+    """
+    if re.search(r"\bentropy\b|энтропи\w*", text, re.I):
+        return "entropy"
+    return None
 
 
 def _size_field(text: str, entity: str) -> str:
@@ -370,13 +457,12 @@ def jwt_summary(token: str, *, now: float | None = None) -> dict[str, Any]:
 
     claims = extract_jwt_claims(token)
     if claims is None:
-        return {"valid_shape": False, "note": "The value does not have a JWT structure."}
+        return {prose.NOT_A_JWT}
     out: dict[str, Any] = {
         "valid_shape": True,
         "signature_verified": False,
         "note": (
-            "Decoding a JWT proves nothing about authenticity. The signature was not "
-            "verified and the token must be treated as untrusted input."
+            prose.JWT_NOT_VERIFIED
         ),
         "claims": redact_secrets(claims.get("payload", {})),
         "header": claims.get("header", {}),

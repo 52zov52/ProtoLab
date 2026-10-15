@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 
 from ...analyzers.byte_analysis import align_messages, group_by_length, hexdump
 from ...analyzers.framing import FramingConfig, suggest_framing
+from ... import prose
 from ...core.errors import DependencyUnavailable, NotFound
 from ...models import Capture, Message, Stream, TcpSession
 from ...schemas import CompareRequest, DecryptRequest, MessageOut, StreamOut
@@ -361,11 +362,7 @@ def framing_suggestions(stream_id: str, session: SessionDep, storage: StorageDep
     return {
         "stream_id": stream_id,
         "suggestions": suggestions,
-        "disclaimer": (
-            "These are candidates scored from observed bytes, not conclusions. "
-            "Apply one and validate it against a corpus before treating it as the "
-            "protocol's framing."
-        ),
+        "disclaimer": prose.FRAMING_DISCLAIMER,
     }
 
 

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import select
 
 from ...analyzers.capture_reader import describe_flags
+from ... import prose
 from ...core.errors import NotFound
 from ...models import Capture, Message, Packet, Stream, TcpSession
 from ...schemas import SessionOut, StreamOut
@@ -90,11 +91,7 @@ def session_timeline(session_id: str, session: SessionDep) -> dict[str, Any]:
         "saw_rst": any("RST" in e["flags_text"] for e in events),
         "duplicate_ack_runs": summary.get("duplicate_ack_runs", []),
         "events": events,
-        "disclaimer": (
-            "This timeline shows events observed in the capture. It does not prove the "
-            "internal state of either TCP stack, and packets absent from the capture are "
-            "simply unknown."
-        ),
+        "disclaimer": prose.TIMELINE_DISCLAIMER,
     }
 
 

@@ -7,6 +7,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
+from ... import prose
 from ...core.config import Settings
 from ...core.logging import AuditEvent, get_logger
 from ...models import Capture
@@ -54,12 +55,7 @@ def capabilities(settings: SettingsDep) -> dict[str, Any]:
         "entities": sorted(FIELD_SPECS),
         "fields": FIELD_SPECS,
         "operators": list(OPERATORS_ALLOWED),
-        "execution_model": (
-            "Requests are compiled into a typed query plan, schema-validated, "
-            "checked against a field/operator allowlist, and executed through a "
-            "fixed analytics API. No SQL, shell command or Python is ever "
-            "generated from user text or from model output."
-        ),
+        "execution_model": prose.EXECUTION_MODEL,
         "external_ai": {
             "enabled": settings.allow_external_ai,
             "provider": _provider_label(settings),
@@ -70,23 +66,9 @@ def capabilities(settings: SettingsDep) -> dict[str, Any]:
             # answered when asked. Never the key itself.
             "configured": _provider_configured(settings),
             "default": "disabled",
-            "note": (
-                "External AI is off by default. Even when enabled it may only "
-                "narrate already-validated results; it cannot execute queries, "
-                "write files, or alter the investigation. Report generation "
-                "additionally requires per-project consent in Project Settings."
-                " A hosted endpoint receives only redacted, aggregated findings - "
-                "never packet bytes, never a capture file, never a key log."
-            ),
+            "note": prose.EXTERNAL_AI_NOTE,
         },
-        "limitations": [
-            "Searches run against plaintext payloads only; encrypted TLS content is "
-            "not scanned unless a matching key log was supplied and decryption ran.",
-            "Request/response pairing is inferred from ordering, not from a request "
-            "identifier, unless the interpretation defines one.",
-            "A JWT that decodes is not a JWT that is authentic; signatures are not "
-            "verified here.",
-        ],
+        "limitations": list(prose.CAPABILITY_LIMITATIONS),
     }
 
 
@@ -95,7 +77,7 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
     if len(payload.query) > 1000:
         from ...core.errors import ValidationFailed
 
-        raise ValidationFailed("The query is too long (limit 1000 characters).")
+        raise ValidationFailed(prose.EMPTY_QUERY_HINT)
 
     try:
         compiled = compile_query(payload.query, capture_ids=payload.capture_ids)
@@ -106,8 +88,7 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
             "interpretation": None,
             "suggestions": _suggestions(),
             "note": (
-                "The assistant refused to guess. Narrow the request to one of the "
-                "supported patterns, or use the structured query API directly."
+                prose.REFUSED_TO_GUESS
             ),
         }
 
@@ -119,7 +100,7 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
             "plan_summary": summarise_plan(compiled.plan),
             "warnings": compiled.warnings,
             "executed": False,
-            "note": "Dry run: the plan was compiled and validated but not executed.",
+            "note": prose.DRY_RUN_NOTE,
         }
 
     if settings.allow_external_ai:
@@ -149,10 +130,7 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
             response["llm"] = {
                 "used": False,
                 "reason": (
-                    "External AI is disabled. Set MPLAB_ALLOW_EXTERNAL_AI=true and "
-                    "point MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL at "
-                    "an endpoint (or run a local Ollama) to permit an optional "
-                    "narration pass."
+                    prose.LLM_DISABLED_REASON
                 ),
             }
         else:
@@ -162,6 +140,7 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
                     plan=compiled.plan.model_dump(),
                     result_summary=_result_summary(result),
                     limits=settings.limits,
+                    locale=payload.locale,
                 )
             except LLMUnavailable as exc:
                 response["llm"] = {"used": False, "reason": str(exc)}
