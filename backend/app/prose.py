@@ -194,6 +194,16 @@ NOT_A_JWT = "The value does not have a JWT structure."
 
 EMPTY_QUERY_HINT = "The query is too long (limit 1000 characters)."
 
+#: The compiled plan, in one line, with a placeholder for the parts the compiler
+#: filled in. A template and not a finished sentence because "on messages,
+#: payload_length greater_than 1000" is data - translating it would mean
+#: translating a field name.
+PLAN_INTERPRETATION = "Interpreted as: on {body}."
+
+LEADING_BYTES_EQUAL = "leading {width} byte(s) are equal across messages"
+
+RESPONSE_WITHIN = "messages where a response followed a request within {seconds}s"
+
 #: Every string above, for the coverage test. Template strings are checked in
 #: their placeholder form; the values are data, not prose.
 ALL: tuple[str, ...] = (
@@ -228,4 +238,7 @@ ALL: tuple[str, ...] = (
     RATE_ANALYSIS_ELSEWHERE,
     NOT_A_JWT,
     EMPTY_QUERY_HINT,
+    PLAN_INTERPRETATION,
+    LEADING_BYTES_EQUAL,
+    RESPONSE_WITHIN,
 )

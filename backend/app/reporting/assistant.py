@@ -169,6 +169,12 @@ class CompileError(ValueError):
 class CompiledQuery:
     plan: QueryPlan
     interpretation: str
+    # The same sentence with its parts kept separate: the entity and the filter
+    # clauses are data (field names, operators, values), while "Interpreted as"
+    # is prose. A finished English sentence cannot be a translation key - the
+    # numbers change with every query - so the interface composes it from the
+    # template and these parts, and leaves the field names alone.
+    interpretation_parts: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     ambiguous: bool = False
     follow_up: str | None = None
@@ -320,7 +326,7 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
             # Naming it as the field made every leading-byte request fail
             # validation - while the interface offered it as an example.
             filters.append(QueryFilter(field="byte_at", operator="byte_equals_at", value=width))
-            explanation.append(f"leading {width} byte(s) are equal across messages")
+            explanation.append(prose.LEADING_BYTES_EQUAL.format(width=width))
             warnings.append(
                 prose.LEADING_BYTES_NOT_MEANING
             )
@@ -349,7 +355,7 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
                     QueryFilter(field="timestamp", operator="greater_or_equal", value=0)
                 )
                 explanation.append(
-                    f"messages where a response followed a request within {seconds:.3f}s"
+                    prose.RESPONSE_WITHIN.format(seconds=f"{seconds:.3f}")
                 )
                 warnings.append(
                     prose.PAIRING_BY_ORDER
@@ -395,9 +401,10 @@ def compile_query(text: str, *, capture_ids: Sequence[str] | None = None) -> Com
 
     return CompiledQuery(
         plan=plan,
-        interpretation=(
-            f"Interpreted as: on {entity}, " + ", ".join(explanation) + "."
+        interpretation=prose.PLAN_INTERPRETATION.format(
+            body=entity + ", " + ", ".join(explanation)
         ),
+        interpretation_parts=[entity, *explanation],
         warnings=warnings,
         ambiguous=False,
     )

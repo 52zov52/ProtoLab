@@ -119,6 +119,32 @@ const box = container.querySelector("textarea") as HTMLTextAreaElement;
     expect(box.value).toMatch(/[а-яА-ЯёЁ]/);
   });
 
+  it("shows the answer after Run", async () => {
+    // The button used to send the request and throw the reply away: the page
+    // read a `result` field off useAction, which does not have one, so the
+    // panel kept saying "no result yet". Every earlier test here passed while
+    // the page was broken, because none of them checked for output.
+    (api.assistantQueryIn as Mock).mockResolvedValue({
+      status: "planned",
+      executed: false,
+      interpretation: "messages with payload_length greater than 1000",
+      plan: { entity: "messages", filters: [] },
+      plan_summary: "payload_length > 1000",
+      warnings: [],
+    });
+    const user = userEvent.setup();
+    renderRussian();
+
+    await user.click(await screen.findByText(LABEL));
+    await user.click(screen.getByText("Запустить"));
+
+    expect(await screen.findByText("Результат")).toBeTruthy();
+    expect(
+      screen.getByText("messages with payload_length greater than 1000"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Результата пока нет")).toBeNull();
+  });
+
   it("submits the Russian question", async () => {
     const user = userEvent.setup();
     renderRussian();

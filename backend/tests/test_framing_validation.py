@@ -69,6 +69,68 @@ def test_a_bad_framing_rule_is_refused_before_anything_is_written(client, projec
     assert capture["analysis_status"] != "failed"
 
 
+def test_a_too_small_corpus_is_refused_with_the_numbers_in_details(
+    client, project, bench_dir, bench_framing
+):
+    """The refusal has to be actionable, not just accurate.
+
+    Reported live as an English sentence with two digits in it. The digits can
+    change, so the sentence cannot be a translation key; the interface needs
+    them as data to say anything at all - and it needs to know *why* the corpus
+    is small, which is that messages exist only where a framing rule applies.
+    """
+    with (bench_dir / "basic.pcap").open("rb") as handle:
+        capture = client.post(
+            "/api/captures",
+            data={"project_id": project["id"], "name": "small.pcap"},
+            files={"file": ("small.pcap", handle, "application/octet-stream")},
+        ).json()
+    client.post(
+        f"/api/captures/{capture['id']}/analyze", json={"framing": bench_framing}
+    )
+
+    refused = client.post(
+        "/api/anomalies/train",
+        json={"name": "small", "capture_ids": [capture["id"]], "scope": "messages"},
+    )
+
+    assert refused.status_code == 400, refused.text
+    error = refused.json()["error"]
+    assert error["code"] == "insufficient_corpus"
+
+    details = error["details"]
+    assert details["available"] > 0, "the corpus does exist; it is the size that is short"
+    assert details["required"] >= 20
+    assert details["scope"] == "messages"
+    assert details["detector"] in ("robust_profile", "isolation_forest")
+    # The next step names the actual cause, not just "try again".
+    assert "framing rule" in details["next_step"]
+
+
+def test_a_corpus_big_enough_does_not_hit_that_error(
+    client, project, bench_dir, bench_framing, monkeypatch
+):
+    """The guard must not fire on a corpus that can be learned from."""
+    import app.analyzers.anomaly_detection as detector
+
+    monkeypatch.setattr(detector, "MIN_TRAINING_SAMPLES_PROFILE", 1)
+    with (bench_dir / "basic.pcap").open("rb") as handle:
+        capture = client.post(
+            "/api/captures",
+            data={"project_id": project["id"], "name": "ok.pcap"},
+            files={"file": ("ok.pcap", handle, "application/octet-stream")},
+        ).json()
+    client.post(
+        f"/api/captures/{capture['id']}/analyze", json={"framing": bench_framing}
+    )
+
+    trained = client.post(
+        "/api/anomalies/train",
+        json={"name": "ok", "capture_ids": [capture["id"]], "scope": "messages"},
+    )
+    assert trained.status_code == 200, trained.text
+
+
 def test_a_good_framing_rule_is_accepted(client, project, bench_dir, bench_framing):
     with (bench_dir / "basic.pcap").open("rb") as handle:
         imported = client.post(

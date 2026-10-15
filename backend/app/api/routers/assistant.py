@@ -96,6 +96,7 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
         return {
             "status": "planned",
             "interpretation": compiled.interpretation,
+            "interpretation_parts": compiled.interpretation_parts,
             "plan": compiled.plan.model_dump(),
             "plan_summary": summarise_plan(compiled.plan),
             "warnings": compiled.warnings,
@@ -119,6 +120,7 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
     response: dict[str, Any] = {
         "status": "executed",
         "interpretation": compiled.interpretation,
+        "interpretation_parts": compiled.interpretation_parts,
         "plan": compiled.plan.model_dump(),
         "plan_summary": summarise_plan(compiled.plan),
         "warnings": compiled.warnings,

@@ -153,12 +153,25 @@ class NotImplementedFeature(AppError):
     status_code = 501
 
 
+class InsufficientCorpus(ValidationFailed):
+    """The request is well formed, but the corpus is too small to learn from.
+
+    Its own type because the interface has to *react*, not just print: the
+    numbers of what was needed and what was there belong in ``details`` so the
+    message can be translated and paired with the action that would help.
+    """
+
+    code = "insufficient_corpus"
+    status_code = 400
+
+
 __all__ = [
     "AnalysisFailed",
     "AppError",
     "Canceled",
     "Conflict",
     "DependencyUnavailable",
+    "InsufficientCorpus",
     "LimitExceeded",
     "NotFound",
     "NotImplementedFeature",

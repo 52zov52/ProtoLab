@@ -11,11 +11,12 @@
  */
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import AnomaliesPage from "@/app/anomalies/page";
 import AssistantPage from "@/app/assistant/page";
 import { WorkspaceProvider } from "@/hooks/use-workspace";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { LocaleProvider, translate } from "@/lib/i18n";
 import { RU_MESSAGES } from "@/lib/i18n/ru";
 import { setActiveLocale } from "@/lib/format";
@@ -36,9 +37,11 @@ vi.mock("@/lib/api", async (importOriginal) => {
       getProject: vi.fn(),
       projectCaptures: vi.fn(),
       assistantCapabilities: vi.fn(),
+      assistantQueryIn: vi.fn(),
       anomaliesStatus: vi.fn(),
       anomaliesModels: vi.fn(),
       anomaliesScore: vi.fn(),
+      anomaliesTrain: vi.fn(),
     },
   };
 });
@@ -147,7 +150,95 @@ describe("a Russian interface speaks Russian", () => {
     expect(translate("ru", AVAILABILITY_NOTE)).toMatch(/[а-яА-ЯёЁ]/);
   });
 
-  it("keeps the availability note consistent with the badge beside it", () => {
+  it("explains a too-small corpus with both numbers and a way forward", async () => {
+    // The bare error this replaces was an English sentence with two digits in
+    // it, and said nothing about the cause: messages exist only where a framing
+    // rule was applied.
+    (api.anomaliesTrain as Mock).mockRejectedValue(
+      new ApiError(
+        400,
+        "insufficient_corpus",
+        "At least 20 samples are needed to train a robust profile; only 6 were available.",
+        {
+          available: 6,
+          required: 20,
+          scope: "messages",
+          detector: "robust_profile",
+          next_step: "…",
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    // The training form only appears when detection is available; the sibling
+    // test deliberately reports an outage to read the availability note.
+    (api.anomaliesStatus as Mock).mockResolvedValue({
+      available: true,
+      algorithm: "isolation_forest",
+      sklearn_installed: true,
+      min_samples: { isolation_forest: 50, robust_profile: 20 },
+      availability_note:
+        "scikit-learn is installed, so a corpus of 50 or more messages trains an Isolation Forest. A smaller corpus trains a robust per-feature profile instead, and the training summary says so.",
+    });
+    const { container } = renderRussian(<AnomaliesPage />);
+
+    // Pick the only capture, then ask for a baseline.
+    await user.click(await screen.findByRole("checkbox"));
+    await user.click(screen.getByText("Обучить базовую линию"));
+
+    await screen.findByText(/корпус слишком мал/i);
+    const text = container.textContent ?? "";
+
+    // Both numbers, with the scope in the right grammatical case: after "из 20"
+    // Russian needs the genitive plural ("сообщений"), not the nominative
+    // ("сообщения"). Scoped to the count line - "сообщения" is also the name
+    // of the scope dropdown, where the nominative is correct.
+    const countLine = (text.match(/6 из 20 [а-яё]+/) ?? [""])[0];
+    expect(countLine).toBe("6 из 20 сообщений");
+    // ...and what would actually change them.
+    expect(text).toMatch(/фрейминг/i);
+    expect(text).toMatch(/Верстак протокола/i);
+    // No English sentence survives.
+    expect(englishSentencesIn(container)).toEqual([]);
+  });
+
+it("speaks Russian in the query result, not only in the capability panel", async () => {
+    // The compiled plan arrives as an English sentence with the field names in
+    // it: "Interpreted as: on messages, payload_length greater_than 1000."
+    // The words must be translatable; the names must not be.
+    (api.assistantQueryIn as Mock).mockResolvedValue({
+      status: "planned",
+      executed: false,
+      interpretation:
+        "Interpreted as: on messages, payload_length greater_than 1000.",
+      interpretation_parts: [
+        "messages",
+        "payload_length greater_than 1000",
+      ],
+      plan: { entity: "messages", filters: [] },
+      plan_summary: "entity=messages; limit=100",
+      warnings: [],
+    });
+    const user = userEvent.setup();
+    const { container } = renderRussian(<AssistantPage />);
+
+    const box = container.querySelector("textarea") as HTMLTextAreaElement;
+    await user.type(box, "Найти все TCP-ответы длиннее 1000 байт");
+    expect(box.value).toMatch(/TCP/);
+    const run = screen.getByText("Запустить") as HTMLButtonElement;
+    expect(run.disabled).toBe(false);
+    await user.click(run);
+
+    await screen.findByText(/Истолковано как/);
+    const text = container.textContent ?? "";
+    // The sentence is Russian...
+    expect(text).toMatch(/Истолковано как/);
+    expect(text).not.toMatch(/Interpreted as/);
+    // ...while the field name, which the plan really contains, is untouched.
+    expect(text).toMatch(/payload_length/);
+    expect(englishSentencesIn(container)).toEqual([]);
+  });
+
+it("keeps the availability note consistent with the badge beside it", () => {
     // The badge and the note describe the same installation from two sources:
     // one is a frontend label, one is the API's own sentence. When the mock
     // says scikit-learn is missing, they must not disagree on the page.

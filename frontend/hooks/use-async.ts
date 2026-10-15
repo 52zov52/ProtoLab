@@ -78,18 +78,34 @@ export function useAction() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * The last failure as an object, not just its message.
+   *
+   * A page that can only read `error` as a string cannot tell a rejected upload
+   * from a corpus that is too small to learn from, and has to print whatever
+   * English sentence the server sent. The API already distinguishes them by
+   * `code` and carries the numbers in `details`; this is what makes that visible.
+   */
+  const [failure, setFailure] = useState<ApiError | null>(null);
 
   const run = useCallback(
     async <T,>(fn: () => Promise<T>, successMessage?: string): Promise<T | null> => {
       setPending(true);
       setError(null);
+      setFailure(null);
       setNotice(null);
       try {
         const value = await fn();
         if (successMessage) setNotice(successMessage);
         return value;
       } catch (cause) {
-        setError(cause instanceof ApiError ? cause.message : String(cause));
+        if (cause instanceof ApiError) {
+          setError(cause.message);
+          setFailure(cause);
+        } else {
+          setError(String(cause));
+          setFailure(null);
+        }
         return null;
       } finally {
         setPending(false);
@@ -100,10 +116,11 @@ export function useAction() {
 
   const clear = useCallback(() => {
     setError(null);
+    setFailure(null);
     setNotice(null);
   }, []);
 
-  return { pending, error, notice, run, clear, setError };
+  return { pending, error, notice, failure, run, clear, setError };
 }
 
 /** Poll a job until it reaches a terminal state. */

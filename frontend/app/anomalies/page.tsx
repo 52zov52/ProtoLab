@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui";
 import { useAction, useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 
@@ -180,9 +181,11 @@ export default function AnomaliesPage() {
                 }}
               />
               {action.notice && <p className="px-3 pb-3 text-2xs text-status-ok">{action.notice}</p>}
-              {action.error && (
+              {action.failure?.code === "insufficient_corpus" ? (
+                <CorpusTooSmall failure={action.failure} projectId={projectId} />
+              ) : action.error ? (
                 <p className="px-3 pb-3 font-mono text-2xs text-status-bad">{action.error}</p>
-              )}
+              ) : null}
             </Panel>
 
             {latest && (
@@ -210,6 +213,88 @@ export default function AnomaliesPage() {
             {scoreResult && <ScoreResult result={scoreResult} />}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "The corpus is too small", said in the reader's language, with the two numbers
+ * and what would actually change them.
+ *
+ * The bare error this replaces was an English sentence with two numbers in it:
+ * accurate, translatable only as a whole string that would break the moment
+ * either number changed, and silent about the actual cause - messages exist only
+ * where a framing rule was applied, so a capture with no framing rule
+ * contributes none at all.
+ */
+function CorpusTooSmall({ failure, projectId }: { failure: ApiError; projectId: string }) {
+  const { t } = useI18n();
+  const details = (failure.details ?? {}) as {
+    available?: number;
+    required?: number;
+    scope?: string;
+    detector?: string;
+    next_step?: string;
+  };
+  const available = Number(details.available ?? 0);
+  const required = Number(details.required ?? 0);
+  // The noun belongs to the sentence, not to a slot in it: after "из 20" Russian
+  // needs the genitive plural ("сообщений"), not the nominative ("сообщения"),
+  // and no amount of parameter swapping produces the right form.
+  const count =
+    details.scope === "sessions"
+      ? t("{available} of {required} sessions", {
+          available: available.toLocaleString("ru-RU"),
+          required: required.toLocaleString("ru-RU"),
+        })
+      : t("{available} of {required} messages", {
+          available: available.toLocaleString("ru-RU"),
+          required: required.toLocaleString("ru-RU"),
+        });
+  const benchHref = `/protocol-bench?project=${encodeURIComponent(projectId)}`;
+
+  return (
+    <div className="space-y-2 border-t border-line p-3 text-2xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone="warn">{t("corpus too small")}</Badge>
+        <span className="font-mono text-text-muted">{count}</span>
+      </div>
+      <p className="text-text-muted">
+        {t(
+          "A baseline learns what this corpus usually looks like, so it needs enough of it to have a 'usually'. This one does not, and a model trained on it would rank noise.",
+        )}
+      </p>
+      <ul className="space-y-1 text-text-muted">
+        <li>
+          •{" "}
+          {t(
+            "Messages only exist where a framing rule has been applied. A capture without one contributes none - check the capture's analysis, or derive a rule in the Protocol Bench.",
+          )}
+        </li>
+        <li>
+          • {t("Add captures to the corpus: more captures of the same protocol is the direct fix.")}
+        </li>
+        <li>
+          •{" "}
+          {details.detector === "robust_profile"
+            ? t(
+                "A corpus of at least {required} would train the robust profile, and {count} would train the Isolation Forest instead.",
+                {
+                  required: required.toLocaleString("ru-RU"),
+                  count: Math.max(required, 50).toLocaleString("ru-RU"),
+                },
+              )
+            : null}
+        </li>
+      </ul>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Link href={benchHref} className="btn">
+          {t("Open the Protocol Bench")}
+        </Link>
+        <Link href={`/captures?project=${encodeURIComponent(projectId)}`} className="btn">
+          {t("Open the captures")}
+        </Link>
       </div>
     </div>
   );

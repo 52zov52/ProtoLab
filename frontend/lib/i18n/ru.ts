@@ -450,6 +450,11 @@ export const RU_MESSAGES: Record<string, string> = {
   // ------------------------------------------------------------------------
   // Investigation Assistant: what it says when it refuses, and why.
   // ------------------------------------------------------------------------
+  "Interpreted as: on {body}.": "Истолковано как: {body}.",
+  "leading {width} byte(s) are equal across messages":
+    "начальные {width} байт(ов) совпадают во всех сообщениях",
+  "messages where a response followed a request within {seconds}s":
+    "сообщения, где ответ пришёл на запрос быстрее чем за {seconds} с",
   "The assistant refused to guess. Narrow the request to one of the supported patterns, or use the structured query API directly.":
     "Ассистент отказался угадывать. Сузьте запрос до одного из поддерживаемых шаблонов или используйте структурированный API запросов.",
   "Dry run: the plan was compiled and validated but not executed.":
@@ -490,6 +495,20 @@ export const RU_MESSAGES: Record<string, string> = {
     "Isolation Forest требует {required} примеров, а в этом корпусе их {count}, поэтому использован устойчивый профиль.",
   "scikit-learn is not installed in this deployment, so the robust profile is used.":
     "scikit-learn не установлен в этом развёртывании, поэтому используется устойчивый профиль.",
+  "corpus too small": "корпус слишком мал",
+  "{available} of {required} {scope}": "{available} из {required} {scope}",
+  "{available} of {required} messages": "{available} из {required} сообщений",
+  "{available} of {required} sessions": "{available} из {required} сессий",
+  "A baseline learns what this corpus usually looks like, so it needs enough of it to have a 'usually'. This one does not, and a model trained on it would rank noise.":
+    "Базовая модель учится тому, как этот корпус обычно выглядит, поэтому его должно хватать, чтобы было «обычно». Здесь не хватает, а модель на таком корпусе ранжировала бы шум.",
+  "Messages only exist where a framing rule has been applied. A capture without one contributes none - check the capture's analysis, or derive a rule in the Protocol Bench.":
+    "Сообщения существуют только там, где применено правило фрейминга. Захват без правила не даёт ни одного — проверьте анализ захвата или выведите правило в «Верстаке протокола».",
+  "Add captures to the corpus: more captures of the same protocol is the direct fix.":
+    "Добавьте захваты в корпус: больше захватов того же протокола — прямое решение.",
+  "A corpus of at least {required} would train the robust profile, and {count} would train the Isolation Forest instead.":
+    "Корпус не меньше {required} сообщений обучит устойчивый профиль, а не меньше {count} — Isolation Forest.",
+  "Open the Protocol Bench": "Открыть «Верстак протокола»",
+  "Open the captures": "Открыть захваты",
   "Detector": "Детектор",
   "samples": "примеров",
   "Isolation Forest": "Isolation Forest",

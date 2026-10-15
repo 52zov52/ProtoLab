@@ -21,7 +21,12 @@ from ...analyzers.anomaly_detection import (
     sklearn_available,
     train_baseline,
 )
-from ...core.errors import DependencyUnavailable, NotFound, ValidationFailed
+from ...core.errors import (
+    DependencyUnavailable,
+    InsufficientCorpus,
+    NotFound,
+    ValidationFailed,
+)
 from ...core.logging import AuditEvent
 from ...models import AnomalyModel, Capture, Message, Stream, TcpSession
 from ...schemas import AnomalyScoreRequest, AnomalyTrainRequest
@@ -81,7 +86,36 @@ def train(payload: AnomalyTrainRequest, session: SessionDep) -> dict[str, Any]:
             algorithm=payload.algorithm,
         )
     except ValueError as exc:
-        raise ValidationFailed(str(exc)) from exc
+        # The refusal carries the numbers in `details`, not only in prose, so the
+        # interface can say what is missing in the reader's language and offer the
+        # next step instead of printing an English sentence with two digits in it.
+        available = len(dataset)
+        required = (
+            MIN_TRAINING_SAMPLES_PROFILE
+            if payload.algorithm != "isolation_forest"
+            and active_algorithm() == "robust_profile"
+            or (payload.algorithm == "auto" and active_algorithm(available) == "robust_profile")
+            else MIN_TRAINING_SAMPLES_FOREST
+        )
+        raise InsufficientCorpus(
+            str(exc),
+            details={
+                "available": available,
+                "required": required,
+                "scope": payload.scope,
+                "detector": (
+                    "isolation_forest"
+                    if active_algorithm(available) == "isolation_forest"
+                    else "robust_profile"
+                ),
+                "next_step": (
+                    "Messages exist only where a framing rule has been applied to the "
+                    "capture; a capture with no framing rule contributes no messages at "
+                    "all. Derive or apply a framing rule in the Protocol Bench, add "
+                    "captures to the corpus, or score the sessions of this project."
+                ),
+            },
+        ) from exc
 
     row = AnomalyModel(
         project_id=captures[0].project_id,

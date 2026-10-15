@@ -76,13 +76,21 @@ export default function AssistantPage() {
     [projectId, workspace.revision],
   );
   const [corpus, setCorpus] = useState<string[]>([]);
+  /**
+   * The last answer, kept here rather than read back off `useAction`.
+   *
+   * `useAction` reports pending/error/notice and returns the value to its
+   * caller; it has no `result` field. This page used to reach for one through a
+   * cast, which is always undefined - so Run sent the request, discarded the
+   * answer, and the panel kept saying there was no result. A query the analyst
+   * typed, a click, and no output is indistinguishable from a dead button.
+   */
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const fromUrl = params.get("q");
     if (fromUrl) setQuery(fromUrl);
   }, [params]);
-
-  const result = action.pending ? null : (action as unknown as { result?: unknown }).result ?? null;
 
   return (
     <div className="flex h-full flex-col">
@@ -131,14 +139,16 @@ export default function AssistantPage() {
                   className="btn btn-primary ml-auto"
                   disabled={!query.trim() || action.pending}
                   onClick={() =>
-                    void action.run(() =>
-                      api.assistantQueryIn({
+                    void action.run(async () => {
+                      const answer = await api.assistantQueryIn({
                         query: query.trim(),
                         capture_ids: corpus,
                         dry_run: dryRun,
                         use_llm: useLlm,
-                      }),
-                    )
+                      });
+                      setResult(answer as Record<string, unknown>);
+                      return answer;
+                    })
                   }
                 >
                   <Search className="h-3 w-3" aria-hidden />
@@ -156,7 +166,7 @@ export default function AssistantPage() {
             </div>
           </Panel>
 
-          {result ? <ResultView result={result as Record<string, unknown>} /> : (
+          {result ? <ResultView result={result} /> : (
             <Panel>
               <EmptyState
                 title={t("No result yet")}
@@ -323,7 +333,20 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
             {result.executed ? t("executed") : t("planned (dry run)")}
           </Badge>
           <span className="text-2xs text-text-muted">
-            {t(String(result.interpretation ?? ""))}
+            {/*
+              Composed from the template and its parts, because the API's
+              sentence carries a query-dependent value ("...greater_than 1000.")
+              and a sentence that changes cannot be a translation key. The parts
+              are field names and operators and stay exactly as the plan has
+              them; only the framing is translated.
+            */}
+            {(() => {
+              const parts = (result.interpretation_parts ?? []) as string[];
+              if (parts.length > 0) {
+                return t("Interpreted as: on {body}.", { body: parts.join(", ") });
+              }
+              return t(String(result.interpretation ?? ""));
+            })()}
           </span>
         </div>
 
