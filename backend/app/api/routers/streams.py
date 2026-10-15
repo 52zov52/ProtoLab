@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 
 from ...analyzers.byte_analysis import align_messages, group_by_length, hexdump
 from ...analyzers.framing import FramingConfig, suggest_framing
-from ...core.errors import NotFound
+from ...core.errors import DependencyUnavailable, NotFound
 from ...models import Capture, Message, Stream, TcpSession
 from ...schemas import CompareRequest, DecryptRequest, MessageOut, StreamOut
 from ..context import SessionDep, StorageDep, load_capture
@@ -154,6 +154,7 @@ def stream_decrypt(
     rather than guessed at.
     """
     from ...analyzers.tls_decryption import (
+        CryptoUnavailable,
         SessionKeys,
         decrypt_records,
         describe_keylog,
@@ -257,7 +258,13 @@ def stream_decrypt(
 
     results = []
     for offset, chunk in window:
-        results.extend(decrypt_records(chunk, keys, base_offset=offset))
+        try:
+            results.extend(decrypt_records(chunk, keys, base_offset=offset))
+        except CryptoUnavailable as exc:
+            # A missing dependency is named as such. Reporting every record as
+            # "auth_failed" would claim the keys were wrong, which is a
+            # different problem with a different fix.
+            raise DependencyUnavailable(str(exc)) from exc
 
     return {
         "stream_id": stream_id,

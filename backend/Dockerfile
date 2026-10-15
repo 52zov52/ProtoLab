@@ -38,7 +38,8 @@ RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
     && /opt/venv/bin/pip install "fastapi==0.141.1" "uvicorn[standard]==0.34.0" \
         "pydantic==2.13.5" "SQLAlchemy==2.0.48" "alembic==1.20.0" \
-        "python-multipart==0.0.20" "numpy==2.3.1" "scikit-learn==1.7.0"
+        "python-multipart==0.0.20" "numpy==2.3.1" "scikit-learn==1.7.0" \
+        "cryptography==48.0.0"
 
 COPY app ./app
 # The Alembic environment is part of the application, not a developer tool: the

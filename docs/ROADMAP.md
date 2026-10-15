@@ -68,7 +68,7 @@
 | FastAPI/Pydantic/SQLAlchemy/SQLite | ✅ | |
 | Alembic | ✅ | `alembic.ini` + `alembic/`, `0001_initial` (автогенерация из моделей), самонакат на старте |
 | Scapy/TShark | ✅ | TShark опционально, есть свой ридер (по ТЗ корректность важнее библиотеки) |
-| pandas / numpy / scikit-learn / cryptography | ✅ | в `pyproject.toml` |
+| pandas / numpy / scikit-learn / cryptography | ✅ | в `pyproject.toml`; `cryptography` добавлен в базовые зависимости (его импортирует расшифровка TLS, а он не был объявлен — нашёл CI; теперь проверяется `tests/test_dependencies.py`) |
 
 ### Безопасность §21
 

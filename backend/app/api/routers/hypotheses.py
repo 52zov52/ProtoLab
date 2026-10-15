@@ -1,4 +1,4 @@
-﻿"""Hypotheses, interpretations, validation runs and counterexamples."""
+"""Hypotheses, interpretations, validation runs and counterexamples."""
 
 from __future__ import annotations
 

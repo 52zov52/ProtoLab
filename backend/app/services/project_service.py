@@ -1,4 +1,4 @@
-﻿"""Project, capture and job services plus the audit log."""
+"""Project, capture and job services plus the audit log."""
 
 from __future__ import annotations
 

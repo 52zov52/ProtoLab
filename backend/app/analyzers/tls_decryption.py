@@ -64,6 +64,27 @@ class UnsupportedSuite(ValueError):
         self.reason = reason
 
 
+class CryptoUnavailable(RuntimeError):
+    """This build has no AEAD backend, so nothing can be opened.
+
+    Named separately from a per-record failure because it is not about the
+    traffic: it is a missing dependency, and the caller has to say *that* rather
+    than reporting every record as "auth_failed" (which would be a lie: nothing
+    was even attempted).
+    """
+
+
+def require_crypto() -> None:
+    """Fail loudly and specifically when the crypto backend is absent."""
+    try:
+        import cryptography  # noqa: F401
+    except ImportError as exc:  # pragma: no cover - exercised via monkeypatch
+        raise CryptoUnavailable(
+            "The 'cryptography' package is not installed, so TLS application "
+            "records cannot be decrypted in this deployment."
+        ) from exc
+
+
 # --------------------------------------------------------------------------- #
 # Record layer
 # --------------------------------------------------------------------------- #
@@ -580,6 +601,7 @@ def decrypt_records(
     base_offset: int = 0,
 ) -> list[DecryptedRecord]:
     """Decrypt every application-data record of one direction, honestly."""
+    require_crypto()
     suite = keys.cipher_suite
     records = iter_records(data, base_offset)
     if suite is None:

@@ -1,4 +1,4 @@
-﻿"""Declarative protocol specifications and the engine that applies them.
+"""Declarative protocol specifications and the engine that applies them.
 
 A specification is *data*, never code.  It is parsed with Pydantic (strict
 types, depth and length limits) and interpreted by a bounded evaluator with no

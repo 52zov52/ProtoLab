@@ -1,4 +1,4 @@
-﻿"""Long-running job bodies.
+"""Long-running job bodies.
 
 Kept separate from the routers so the same function backs both the synchronous
 ``/analyze`` endpoint and the queued ``/analyze-async`` endpoint, and so the

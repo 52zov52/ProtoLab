@@ -1,7 +1,7 @@
 # Testing
 
 ```bash
-# Backend - 229 tests (test_api_docs.py keeps docs/API.md honest)
+# Backend - 242 tests (test_api_docs.py keeps docs/API.md honest; test_dependencies.py keeps pyproject honest)
 python -m pytest backend -q
 
 # Frontend - 113 tests
@@ -73,6 +73,7 @@ longer reproduces the models.
 | `test_migrations.py` | Alembic reproduces the models; an existing database is stamped, not replayed |
 | `test_anomaly_profile.py` | The numpy baseline finds planted outliers, is deterministic, and degrades honestly |
 | `test_llm_providers.py` | Narration providers over real HTTP; the API key never leaks |
+| `test_dependencies.py` | Every third-party import is declared in pyproject; no BOM in a source file |
 | `test_tls_decryption.py` | TLS 1.2/1.3 round trips, and every refusal path (wrong key, flip, truncation, unsupported) |
 | `test_tls_keylog_api.py` | Key-log upload/list/delete, ownership, size ceiling, decrypt refusal |
 | `test_bind_config.py` | Bind/loopback security configuration |

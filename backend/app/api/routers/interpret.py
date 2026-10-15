@@ -1,4 +1,4 @@
-﻿"""Interpretation and validation endpoints mounted at the API root.
+"""Interpretation and validation endpoints mounted at the API root.
 
 These are thin aliases of the project-scoped routes in ``hypotheses.py`` so the
 documented flat paths (``/api/interpreters/{id}/validate``) work as specified.

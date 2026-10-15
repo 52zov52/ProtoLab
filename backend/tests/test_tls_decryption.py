@@ -20,9 +20,11 @@ import os
 import struct
 from dataclasses import dataclass
 
+import pytest
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from app.analyzers import tls_decryption as ad
 from app.analyzers.tls_decryption import (
     CONTENT_TYPE_APPLICATION_DATA,
     DecryptedRecord,
@@ -387,3 +389,31 @@ def test_decrypted_record_dict_hides_nothing_and_invents_nothing():
     assert payload["plaintext_hex"] is None
     assert payload["plaintext_length"] == 0
     assert payload["reason"] == "tag"
+
+
+def test_a_missing_crypto_backend_is_named_rather_than_reported_as_a_bad_key(
+    monkeypatch,
+):
+    """The honest failure when `cryptography` is absent.
+
+    Reporting every record as `auth_failed` would say "these bytes were not
+    produced by the keys you supplied", which is a different problem with a
+    different fix. The dependency has to be named as the dependency.
+    """
+    import builtins
+
+    real_import = builtins.__import__
+
+    def without_cryptography(name, *args, **kwargs):
+        if name == "cryptography" or name.startswith("cryptography."):
+            raise ImportError("No module named 'cryptography'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", without_cryptography)
+
+    with pytest.raises(ad.CryptoUnavailable) as excinfo:
+        ad.decrypt_records(record(CONTENT_TYPE_APPLICATION_DATA, os.urandom(48)), keys())
+
+    assert "cryptography" in str(excinfo.value)
+    # ...and it is not dressed up as an authentication failure.
+    assert "auth_failed" not in str(excinfo.value)

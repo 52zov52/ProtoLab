@@ -44,7 +44,7 @@
 
 | Проверка | Команда | Результат |
 |---|---|---|
-| Backend-тесты | `python -m pytest tests -q` (из `backend/`) | **229 passed** (20 файлов) |
+| Backend-тесты | `python -m pytest tests -q` (из `backend/`) | **242 passed** (21 файл) |
 | Frontend-тесты | `npm test` (из `frontend/`) | **113 passed** (21 файл) |
 | Frontend типы | `npm run typecheck` | exit 0 |
 | Frontend линт | `npm run lint` | exit 0 |

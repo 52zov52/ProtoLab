@@ -1,4 +1,4 @@
-﻿"""Hardened, streaming reader for libpcap and pcapng capture files.
+"""Hardened, streaming reader for libpcap and pcapng capture files.
 
 Why a hand-written reader instead of Scapy
 ------------------------------------------
