@@ -209,7 +209,13 @@ suggestions rather than guessing.
 | POST | `/anomalies/train` |
 | POST | `/anomalies/score` |
 
-Returns 503 `dependency_unavailable` when `scikit-learn` is not installed.
+`GET /anomalies/status` reports which detector is active: `isolation_forest` when
+`scikit-learn` is installed, otherwise the numpy `robust_profile` fallback.
+`POST /anomalies/train` accepts `algorithm: auto | isolation_forest |
+robust_profile`; `auto` takes the best available, and asking for
+`isolation_forest` without the extra fails with `400` rather than silently
+training something else. The chosen detector is recorded in the model row and in
+the training summary.
 
 ## Reports
 

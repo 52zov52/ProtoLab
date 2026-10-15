@@ -131,7 +131,10 @@
 Три разные сущности, которые в ТЗ/хакатоне называют «AI»:
 
 - **ML-модель аномалий (функция №9, §15).** Реальный `IsolationForest`
-  (scikit-learn): `backend/app/analyzers/anomaly_detection.py`. Признаки
+  (scikit-learn) с запасным детектором на чистом numpy (`robust_profile`:
+  медиана и MAD по признакам), чтобы вкладка работала в любой установке;
+  активный алгоритм виден в `/api/anomalies/status` и в записи модели:
+  `backend/app/analyzers/anomaly_detection.py`. Признаки
   сообщения (длина, энтропия, уникальные байты, доля нулей, printable, повторы,
   направление, межсообщенческий интервал, число диагностик) и сессии — точно по
   §15. Эндпоинты `/api/anomalies/{status,train,score,models}`, UI

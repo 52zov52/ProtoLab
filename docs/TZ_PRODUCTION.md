@@ -44,7 +44,7 @@
 
 | Проверка | Команда | Результат |
 |---|---|---|
-| Backend-тесты | `python -m pytest tests -q` (из `backend/`) | **201 passed** (18 файлов) |
+| Backend-тесты | `python -m pytest tests -q` (из `backend/`) | **229 passed** (20 файлов) |
 | Frontend-тесты | `npm test` (из `frontend/`) | **103 passed** (20 файлов) |
 | Frontend типы | `npm run typecheck` | exit 0 |
 | Frontend линт | `npm run lint` | exit 0 |
@@ -435,8 +435,10 @@
 ### 10.1. Окружение
 
 - Python ≥3.11 (проверено на 3.12 и 3.14), Node ≥20.
-- Наличие `scikit-learn` включает детектор аномалий; без него эндпоинты честно
-  возвращают `503 dependency_unavailable`.
+- Детектор аномалий работает всегда: с `scikit-learn` базовая линия обучается как
+  Isolation Forest, без него — как честный numpy-профиль; активный алгоритм
+  виден в `/api/anomalies/status` и в записи модели. Явно запрошенный
+  `isolation_forest` без зависимости даёт 400, а не тихую подмену.
 - `tshark` и `pip-audit` опциональны; их отсутствие отображается как `unknown`.
 
 ### 10.2. Локальный запуск (без Docker)

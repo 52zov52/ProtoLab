@@ -190,6 +190,28 @@ export default function AssistantPage() {
                   >
                     {String((capabilities.data.external_ai as { default?: string })?.default ?? "")}
                   </Badge>
+                  {/* Named, so an analyst knows *what* would be contacted - never
+                      the key, which the API does not return. */}
+                  {(() => {
+                    const external = capabilities.data.external_ai as {
+                      enabled?: boolean;
+                      provider?: string | null;
+                      model?: string | null;
+                      configured?: boolean;
+                    };
+                    if (!external?.enabled) return null;
+                    return (
+                      <p className="mt-1 font-mono text-2xs text-text-faint">
+                        {external.configured
+                          ? t("Narration endpoint: {provider}", {
+                              provider: String(external.provider ?? "?"),
+                            })
+                          : t(
+                              "External AI is allowed, but no endpoint is configured; narration stays off.",
+                            )}
+                      </p>
+                    );
+                  })()}
                 </div>
                 <ul className="space-y-1">
                   {((capabilities.data.limitations ?? []) as string[]).map((item, index) => (

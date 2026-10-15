@@ -31,6 +31,21 @@ log = get_logger("mplab.assistant")
 SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
 
 
+def _provider_configured(settings) -> bool:
+    """Whether a narration endpoint is set up, without contacting it."""
+    from ...reporting.llm import resolve_provider
+
+    return type(resolve_provider(settings)).__name__ != "NullProvider"
+
+
+def _provider_label(settings) -> str | None:
+    from ...reporting.llm import resolve_provider
+
+    if not settings.allow_external_ai:
+        return None
+    return resolve_provider(settings).name
+
+
 @router.get("/assistant/capabilities")
 def capabilities(settings: SettingsDep) -> dict[str, Any]:
     """Exactly what the assistant can and cannot do, stated plainly."""
@@ -47,13 +62,21 @@ def capabilities(settings: SettingsDep) -> dict[str, Any]:
         ),
         "external_ai": {
             "enabled": settings.allow_external_ai,
-            "provider": "ollama" if settings.allow_external_ai else None,
+            "provider": _provider_label(settings),
+            "model": settings.llm_model or settings.ollama_model
+            if settings.allow_external_ai
+            else None,
+            # Whether a key/endpoint/model is configured at all, and whether it
+            # answered when asked. Never the key itself.
+            "configured": _provider_configured(settings),
             "default": "disabled",
             "note": (
                 "External AI is off by default. Even when enabled it may only "
                 "narrate already-validated results; it cannot execute queries, "
                 "write files, or alter the investigation. Report generation "
                 "additionally requires per-project consent in Project Settings."
+                " A hosted endpoint receives only redacted, aggregated findings - "
+                "never packet bytes, never a capture file, never a key log."
             ),
         },
         "limitations": [

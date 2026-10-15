@@ -327,26 +327,44 @@ def _check_data_outside_web_root(settings: Settings) -> Check:
 
 
 def _check_external_ai(settings: Settings) -> Check:
-    if not settings.allow_external_ai:
+    from ..reporting.llm import resolve_provider
+
+    provider = resolve_provider(settings)
+    if not settings.allow_external_ai or provider.name == "none":
         return Check(
             "external_ai",
             "External AI transmission is disabled by default",
             "pass",
             "No data can leave this machine through a language model provider.",
-            {"allow_external_ai": False},
+            {"allow_external_ai": settings.allow_external_ai, "provider": "none"},
         )
+    # A local endpoint and a hosted one are different risks, and the difference is
+    # the whole point of naming it: text that goes to localhost stays here, while
+    # text that goes to a gateway does not.
+    local = provider.name.startswith("ollama")
     return Check(
         "external_ai",
         "External AI transmission is disabled by default",
-        "fail",
+        "pass" if local else "fail",
         (
-            "External AI is enabled. Aggregated results may be sent to the configured "
-            "provider; raw packets, key logs and secrets are excluded, but the "
-            "provider's own retention policy applies and is outside this application's "
-            "control."
+            "External AI is enabled against a local model endpoint. Aggregated "
+            "results may be sent to it; the traffic stays on this machine."
+            if local
+            else "External AI is enabled against a hosted provider. Aggregated "
+            "results may be sent to it; raw packets, key logs and secrets are "
+            "excluded, but the provider's own retention policy applies and is "
+            "outside this application's control."
         ),
-        {"allow_external_ai": True, "provider": settings.ollama_url},
-        "Set MPLAB_ALLOW_EXTERNAL_AI=false unless a model is genuinely required.",
+        {
+            "allow_external_ai": True,
+            # Named, never the key: this report is meant to be shareable.
+            "provider": provider.name,
+            "hosted": not local,
+        },
+        (
+            "Set MPLAB_ALLOW_EXTERNAL_AI=false unless a model is genuinely "
+            "required, or point MPLAB_LLM_PROVIDER at a local instance."
+        ),
     )
 
 

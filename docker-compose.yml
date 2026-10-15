@@ -36,9 +36,19 @@ services:
       MPLAB_FRONTEND_ORIGINS: http://127.0.0.1:3000,http://localhost:3000
       MPLAB_DEBUG: "false"
       MPLAB_LOG_LEVEL: INFO
-      # External AI is OFF by default. Nothing leaves the machine unless an
-      # operator sets this to true and runs a local Ollama instance.
-      MPLAB_ALLOW_EXTERNAL_AI: "false"
+      # Narration (assistant and report prose) is OFF by default. Nothing leaves
+      # the machine unless an operator sets MPLAB_ALLOW_EXTERNAL_AI=true here or
+      # in .env — and even then a project must record its own consent, and only
+      # redacted, aggregated findings are ever sent.
+      MPLAB_ALLOW_EXTERNAL_AI: ${MPLAB_ALLOW_EXTERNAL_AI:-false}
+      # "auto" uses a hosted OpenAI-compatible endpoint when all three of
+      # MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL are set, and a
+      # local Ollama instance otherwise. "none" disables narration outright.
+      MPLAB_LLM_PROVIDER: ${MPLAB_LLM_PROVIDER:-auto}
+      MPLAB_LLM_BASE_URL: ${MPLAB_LLM_BASE_URL:-}
+      # Keep the key in .env (git-ignored), never in this file.
+      MPLAB_LLM_API_KEY: ${MPLAB_LLM_API_KEY:-}
+      MPLAB_LLM_MODEL: ${MPLAB_LLM_MODEL:-}
       # Only used when the optional "ai" profile supplies a model. Override in
       # .env to point at the compose Ollama service (http://madrigal-ollama:11434).
       MPLAB_OLLAMA_URL: ${MPLAB_OLLAMA_URL:-http://127.0.0.1:11434}

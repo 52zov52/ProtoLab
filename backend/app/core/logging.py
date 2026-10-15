@@ -38,6 +38,17 @@ _KEYLOG_LINE = re.compile(
 
 MASK = "***redacted***"
 
+# Provider API keys have recognisable shapes, and the one place they could leak
+# from is a string that already went past the dict-key check: an error message
+# that quotes a gateway response, or a note an analyst typed. Masking the shape
+# here is the belt to the settings dump's braces.
+_API_KEY_TOKEN = re.compile(
+    r"\b(?:sk|pk|rk)-[A-Za-z0-9_-]{8,}\b"  # OpenAI/OpenRouter-style
+    r"|\bBearer\s+[A-Za-z0-9._~+/-]{12,}=*"  # an Authorization header value
+    r"|\bgh[pousr]_[A-Za-z0-9]{16,}\b"  # GitHub-style tokens
+    r"|\bAIza[A-Za-z0-9_-]{20,}\b",  # Google-style keys
+)
+
 
 def redact(value: Any, *, _depth: int = 0) -> Any:
     """Recursively mask anything that looks like a secret.
@@ -62,6 +73,7 @@ def redact(value: Any, *, _depth: int = 0) -> Any:
         text = value
         text = _KEYLOG_LINE.sub("[keylog redacted]", text)
         text = _JWT.sub("[jwt redacted]", text)
+        text = _API_KEY_TOKEN.sub("[api key redacted]", text)
         if len(text) > 256 and _HEX_BLOB.search(text):
             text = _HEX_BLOB.sub("[hex redacted]", text)
         return text

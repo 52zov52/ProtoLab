@@ -39,7 +39,8 @@ failing rather than quietly adjusted.
 | Typed NLP search (no LLM code execution) | working | `/api/assistant/query` |
 | Security Center with honest verdicts | working | `POST /api/security/check` |
 | Schema migrations (Alembic) | working | `backend/alembic` |
-| Anomaly detection (Isolation Forest) | **optional** | needs `scikit-learn` |
+| Anomaly detection (Isolation Forest, numpy profile fallback) | working | `/api/anomalies/train`, `/api/anomalies/score` |
+| Optional narration by an LLM | **off by default** | local Ollama or any OpenAI-compatible endpoint |
 | Multi-user auth / remote mode | **not implemented** | see [Limitations](#known-limitations) |
 
 "optional" means the module reports itself unavailable rather than degrading

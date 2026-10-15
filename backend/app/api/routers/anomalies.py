@@ -9,13 +9,14 @@ from sqlalchemy import select
 
 from ...analyzers.anomaly_detection import (
     FeatureSet,
+    active_algorithm,
     build_matrix,
     explain,
     message_features,
     score,
     session_features,
     sklearn_available,
-    train_isolation_forest,
+    train_baseline,
 )
 from ...core.errors import DependencyUnavailable, NotFound, ValidationFailed
 from ...core.logging import AuditEvent
@@ -28,25 +29,32 @@ router = APIRouter()
 
 @router.get("/anomalies/status")
 def status() -> dict[str, Any]:
-    available = sklearn_available()
+    """What this installation can actually train and score.
+
+    Anomaly detection always works: with scikit-learn present the baseline is an
+    Isolation Forest, and without it a robust per-feature profile. Which one is
+    in use is reported here rather than inferred from a disabled tab.
+    """
+    forest = sklearn_available()
+    algorithm = active_algorithm()
     return {
-        "available": available,
-        "algorithm": "isolation_forest",
+        "available": True,
+        "algorithm": algorithm,
+        "sklearn_installed": forest,
         "availability_note": (
-            "scikit-learn is installed and the detector is active."
-            if available
-            else "scikit-learn is not installed. Anomaly detection is unavailable in "
-            "this deployment; install the 'analytics' extra to enable it."
+            "scikit-learn is installed, so a baseline is trained as an Isolation "
+            "Forest."
+            if forest
+            else "scikit-learn is not installed in this deployment, so a baseline is "
+            "trained as a robust per-feature profile (median and MAD). Scores are "
+            "distances from that profile rather than forest scores; install the "
+            "'analytics' extra for the Isolation Forest."
         ),
     }
 
 
 @router.post("/anomalies/train")
 def train(payload: AnomalyTrainRequest, session: SessionDep) -> dict[str, Any]:
-    if not sklearn_available():
-        raise DependencyUnavailable(
-            "scikit-learn is not installed, so anomaly detection cannot be trained."
-        )
     captures = []
     for capture_id in payload.capture_ids:
         capture = session.get(Capture, capture_id)
@@ -63,11 +71,12 @@ def train(payload: AnomalyTrainRequest, session: SessionDep) -> dict[str, Any]:
 
     dataset = build_matrix(records, extractor, limit=payload.max_samples)
     try:
-        model = train_isolation_forest(
+        model = train_baseline(
             dataset,
             contamination=payload.contamination,
             n_estimators=payload.n_estimators,
             seed=payload.seed,
+            algorithm=payload.algorithm,
         )
     except ValueError as exc:
         raise ValidationFailed(str(exc)) from exc
@@ -75,6 +84,9 @@ def train(payload: AnomalyTrainRequest, session: SessionDep) -> dict[str, Any]:
     row = AnomalyModel(
         project_id=captures[0].project_id,
         name=payload.name,
+        # Recorded from the model itself rather than defaulted: a profile-trained
+        # baseline must not be listed as a forest.
+        algorithm=str(model.params.get("algorithm", "isolation_forest")),
         params=model.params,
         feature_names=model.feature_names,
         training_summary=model.summary,

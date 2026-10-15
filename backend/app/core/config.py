@@ -165,6 +165,15 @@ class Settings:
     allow_external_ai: bool = False
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b-instruct"
+    # -- narration provider ---------------------------------------------- #
+    # "auto" uses a hosted OpenAI-compatible endpoint when an API key is
+    # configured and a local Ollama instance otherwise. "none" disables
+    # narration even if a key is present, so an operator can turn it off without
+    # editing the environment.
+    llm_provider: str = "auto"
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    llm_model: str = ""
     run_jobs_in_subprocess: bool = False
     allow_non_loopback_bind: bool = False
     log_level: str = "INFO"
@@ -246,6 +255,12 @@ class Settings:
             "data_dir": str(self.data_dir),
             "allow_external_ai": self.allow_external_ai,
             "ollama_url": self.ollama_url if self.allow_external_ai else None,
+            # The narration endpoint and model are reported; the API key is not,
+            # and never appears in a log line, a report or /api/health.
+            "llm_provider": self.llm_provider if self.allow_external_ai else "none",
+            "llm_base_url": self.llm_base_url if self.allow_external_ai else None,
+            "llm_model": self.llm_model if self.allow_external_ai else None,
+            "llm_api_key_set": bool(self.llm_api_key) if self.allow_external_ai else False,
             "offline_first": True,
         }
 
@@ -298,6 +313,26 @@ class Settings:
             ),
             ollama_url=str(overrides.pop("ollama_url", None) or os.environ.get("MPLAB_OLLAMA_URL") or "http://127.0.0.1:11434"),
             ollama_model=str(overrides.pop("ollama_model", None) or os.environ.get("MPLAB_OLLAMA_MODEL") or "qwen2.5:7b-instruct"),
+            llm_provider=str(
+                overrides.pop("llm_provider", None)
+                or os.environ.get("MPLAB_LLM_PROVIDER")
+                or "auto"
+            ).strip(),
+            llm_base_url=str(
+                overrides.pop("llm_base_url", None)
+                or os.environ.get("MPLAB_LLM_BASE_URL")
+                or ""
+            ).strip(),
+            llm_api_key=str(
+                overrides.pop("llm_api_key", None)
+                or os.environ.get("MPLAB_LLM_API_KEY")
+                or ""
+            ).strip(),
+            llm_model=str(
+                overrides.pop("llm_model", None)
+                or os.environ.get("MPLAB_LLM_MODEL")
+                or ""
+            ).strip(),
             run_jobs_in_subprocess=bool(
                 overrides.pop("run_jobs_in_subprocess", _env_bool("MPLAB_RUN_JOBS_IN_SUBPROCESS", False))
             ),

@@ -375,6 +375,7 @@ class AnomalyTrainRequest(APIModel):
     n_estimators: int = Field(default=100, ge=10, le=1000)
     max_samples: int = Field(default=50_000, ge=100, le=500_000)
     seed: int = Field(default=42, ge=0, le=2**31 - 1)
+    algorithm: Literal["auto", "isolation_forest", "robust_profile"] = "auto"
 
 
 class AnomalyScoreRequest(APIModel):

@@ -396,6 +396,13 @@ export const RU_MESSAGES: Record<string, string> = {
   Entity: "Сущность",
   Score: "Оценка",
   "What pushed the score": "Что повысило оценку",
+  // ------------------------------------------------------------------------
+  // Assistant: narration provider
+  // ------------------------------------------------------------------------
+  "Narration endpoint: {provider}": "Эндпоинт для формулировок: {provider}",
+  "External AI is allowed, but no endpoint is configured; narration stays off.":
+    "Внешний ИИ разрешён, но эндпоинт не настроен — формулировки остаются выключены.",
+
   Stream: "Поток",
   "mean {value}": "среднее {value}",
   "message {index}": "сообщение {index}",

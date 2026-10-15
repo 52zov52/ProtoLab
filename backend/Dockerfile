@@ -28,12 +28,17 @@ RUN groupadd --system --gid 10001 mplab \
 WORKDIR /app
 
 # Dependencies first so the layer caches independently of the source.
+#
+# scikit-learn is here, not behind an extra: the anomaly detector falls back to a
+# numpy profile when it is missing, but the Isolation Forest is the better
+# detector, and a deployment that silently used the weaker one because nobody
+# knew there was a choice would be the wrong kind of default.
 COPY pyproject.toml ./
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
     && /opt/venv/bin/pip install "fastapi==0.141.1" "uvicorn[standard]==0.34.0" \
         "pydantic==2.13.5" "SQLAlchemy==2.0.48" "alembic==1.20.0" \
-        "python-multipart==0.0.20" "numpy==2.3.1"
+        "python-multipart==0.0.20" "numpy==2.3.1" "scikit-learn==1.7.0"
 
 COPY app ./app
 # The Alembic environment is part of the application, not a developer tool: the

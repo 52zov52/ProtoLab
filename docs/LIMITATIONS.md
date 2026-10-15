@@ -93,21 +93,35 @@ but there is no plugin loader and no user-installable detector.
 
 These work, with limits worth knowing.
 
-### Anomaly detection is optional
+### Anomaly detection has two detectors, and the weaker one is weaker
 
-Requires `scikit-learn`:
+With `scikit-learn` installed:
 
 ```bash
 pip install -e "backend[analytics]"
 ```
 
-Without it the endpoints return `503 dependency_unavailable` and the UI shows
-how to install it. Nothing degrades silently and **no invented scores are ever
-returned**.
+the baseline is an **Isolation Forest**, which is what this product is designed
+around. Without it, training falls back to a **robust per-feature profile** — the
+median and the median absolute deviation per feature, with the outlier threshold
+read off the corpus's own distance distribution.
 
-Scores rank unusualness within the chosen baseline. They are **not**
-probabilities and carry no severity. The seed and model parameters are stored
-so a run can be reproduced.
+The fallback is not a disguised forest and does not pretend to be one:
+
+* `GET /api/anomalies/status` reports which detector is active, and the training
+  summary and the stored model record `robust_profile` as their algorithm;
+* asking for `algorithm: "isolation_forest"` without scikit-learn fails loudly
+  instead of quietly training a different model;
+* the profile's own training summary carries a warning saying which detector was
+  used and that the forest needs the extra;
+* the backend image installs scikit-learn, so `docker compose up` gets the
+  forest anyway.
+
+What the profile detector cannot do: it has no notion of interactions between
+features, and its score is a distance from the baseline in robust units rather
+than a forest score. A score is therefore comparable **within one baseline only**
+— never across two models, and never as a probability or a severity. No invented
+scores are ever returned under either detector.
 
 ### Protocol detection is heuristic
 
