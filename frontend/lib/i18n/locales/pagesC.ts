@@ -55,10 +55,10 @@ export const RU_PAGES_C: TranslationFragment = {
     "Показать сообщения, у которых совпадают первые два байта",
   "Find requests answered within 100 milliseconds":
     "Найти запросы, отвеченные в течение 100 миллисекунд",
-  "Show streams with holes in the reconstructed bytes":
-    "Показать потоки с разрывами в пересобранных байтах",
-  "Find POST requests where HTTP content is visible":
-    "Найти POST-запросы, в которых видно содержимое HTTP",
+  "Show messages with entropy above 7":
+    "Показать сообщения с энтропией выше 7",
+  "Find incomplete messages shorter than 100 bytes":
+    "Найти неполные сообщения короче 100 байт",
   "The assistant refused to guess": "Помощник отказался угадывать",
   "needs clarification": "требует уточнения",
   Result: "Результат",

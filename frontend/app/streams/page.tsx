@@ -333,13 +333,13 @@ export default function StreamsPage() {
                         ) : null}
                         {handshake.match ? (
                           <p className="text-text-muted">
-                            {String((handshake.match as { interpretation?: string }).interpretation ?? "")}
+                            {t(String((handshake.match as { interpretation?: string }).interpretation ?? ""))}
                           </p>
                         ) : null}
                       </div>
                     ))}
                     <Caveat>
-                      {String(tls.data?.interpretation_note ?? "")}
+                      {t(String(tls.data?.interpretation_note ?? ""))}
                     </Caveat>
                   </div>
                 </Panel>
@@ -386,7 +386,7 @@ export default function StreamsPage() {
                       )}
                     </div>
                   ))}
-                  <Caveat>{suggestions.data.disclaimer}</Caveat>
+                  <Caveat>{t(String(suggestions.data.disclaimer))}</Caveat>
                 </div>
               ) : (
                 <EmptyState title={t("No candidates")} />

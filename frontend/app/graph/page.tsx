@@ -403,7 +403,7 @@ export default function GraphPage() {
             )}
             {graph.data && (
               <div className="px-3 pb-3">
-                <Caveat tone="warn">{String(graph.data.interpretation_note)}</Caveat>
+                <Caveat tone="warn">{t(String(graph.data.interpretation_note))}</Caveat>
               </div>
             )}
           </Panel>

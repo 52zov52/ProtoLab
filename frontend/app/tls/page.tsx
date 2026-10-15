@@ -280,7 +280,7 @@ function DecryptPanel({
               </table>
             )}
 
-            <Caveat>{String(result.interpretation ?? "")}</Caveat>
+            <Caveat>{t(String(result.interpretation ?? ""))}</Caveat>
           </div>
         ) : null}
       </div>
@@ -386,7 +386,7 @@ export default function TlsPage() {
                     </Badge>
                   ))}
                 </div>
-                <Caveat>{tls.data.interpretation_note}</Caveat>
+                <Caveat>{t(String(tls.data.interpretation_note))}</Caveat>
                 <p className="text-2xs text-text-faint">
                   {t("fingerprint database: {database}", {
                     database: tls.data.fingerprint_database,

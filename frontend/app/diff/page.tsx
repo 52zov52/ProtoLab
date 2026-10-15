@@ -298,7 +298,7 @@ export default function DiffPage() {
               ) : null}
               <div className="p-3">
                 <Caveat tone="warn">
-                  {String(result.data.interpretation_note)}
+                  {t(String(result.data.interpretation_note))}
                 </Caveat>
               </div>
             </Panel>

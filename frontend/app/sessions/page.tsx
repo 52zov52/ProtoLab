@@ -215,7 +215,7 @@ export default function SessionsPage() {
                     {String(summary.role_rationale ?? "")}
                   </p>
                   {timeline.data ? (
-                    <Caveat>{String(timeline.data.disclaimer ?? "")}</Caveat>
+                    <Caveat>{t(String(timeline.data.disclaimer ?? ""))}</Caveat>
                   ) : null}
                   <div className="overflow-x-auto">
                     <table className="data-table">

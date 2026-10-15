@@ -39,14 +39,44 @@ function interpolate(template: string, params?: Record<string, string | number>)
   );
 }
 
+/**
+ * Which grammatical form a counted noun takes in Russian.
+ *
+ * Russian counts in three: 1 пример / 2 примера / 5 примеров. A sentence that
+ * interpolates a count into a fixed noun form is wrong for two of every three
+ * numbers, which is exactly the kind of mistake a reader notices immediately
+ * and stops trusting. The rule is the standard one: the last two digits decide,
+ * with 11-14 always taking the "many" form because 11 примеров is correct and
+ * not a typo.
+ */
+export function pluralForm(count: number): "one" | "few" | "many" {
+  const absolute = Math.abs(Math.trunc(count));
+  const mod10 = absolute % 10;
+  const mod100 = absolute % 100;
+  if (mod10 === 1 && mod100 !== 11) return "one";
+  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return "few";
+  return "many";
+}
+
 /** Pure translation, usable outside React (and in tests). */
 export function translate(
   locale: Locale,
   source: string,
   params?: Record<string, string | number>,
 ): string {
-  const template = locale === "ru" ? (RU_MESSAGES[source] ?? source) : source;
-  return interpolate(template, params);
+  let key = source;
+  if (locale === "ru") {
+    // A counted noun picks its form from `count`; the catalogue may hold up to
+    // three variants as "<source> :: one|few|many". A source with no variants
+    // falls through to the plain entry, so nothing breaks by omitting them.
+    const count = params?.count;
+    if (typeof count === "number" && Number.isFinite(count)) {
+      const variant = `${source} :: ${pluralForm(count)}`;
+      if (variant in RU_MESSAGES) key = variant;
+    }
+    key = RU_MESSAGES[key] ?? source;
+  }
+  return interpolate(key, params);
 }
 
 const DEFAULT_I18N: I18n = {

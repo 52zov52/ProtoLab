@@ -16,17 +16,53 @@ import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
+/**
+ * Worked examples, in the language they will actually be typed in.
+ *
+ * `en` is the translation key and `ru` the text put into the query box. Sending
+ * the English string while displaying a Russian label would be a lie the analyst
+ * only notices after submitting: the compiler accepts both languages, so nothing
+ * would look wrong and the two would quietly diverge.
+ *
+ * Every example is checked against the compiler in
+ * `tests/suggested-queries-are-supported.test.ts`. Two of the original five -
+ * "streams with holes" and "POST requests" - were never supported in either
+ * language and answered "could not be mapped"; the interface was advertising
+ * queries that could not run.
+ */
 const SUGGESTIONS = [
-  "Find all TCP responses longer than 1000 bytes",
-  "Show messages whose first two bytes match",
-  "Find requests answered within 100 milliseconds",
-  "Show streams with holes in the reconstructed bytes",
-  "Find POST requests where HTTP content is visible",
-];
+  {
+    en: "Find all TCP responses longer than 1000 bytes",
+    ru: "Найти все TCP-ответы длиннее 1000 байт",
+  },
+  {
+    en: "Show messages whose first two bytes match",
+    ru: "Показать сообщения, у которых совпадают первые два байта",
+  },
+  {
+    en: "Find requests answered within 100 milliseconds",
+    ru: "Найти запросы, отвеченные в течение 100 миллисекунд",
+  },
+  {
+    en: "Show messages with entropy above 7",
+    ru: "Показать сообщения с энтропией выше 7",
+  },
+  {
+    en: "Find incomplete messages shorter than 100 bytes",
+    ru: "Найти неполные сообщения короче 100 байт",
+  },
+] as const;
+
+function suggestionText(
+  suggestion: (typeof SUGGESTIONS)[number],
+  locale: string,
+): string {
+  return locale === "ru" ? suggestion.ru : suggestion.en;
+}
 
 export default function AssistantPage() {
   const workspace = useWorkspace();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const params = useSearchParams();
   const projectId = params.get("project") ?? workspace.projectId;
   const [query, setQuery] = useState(params.get("q") ?? "");
@@ -68,7 +104,7 @@ export default function AssistantPage() {
               <textarea
                 className="input h-20 resize-y"
                 maxLength={1000}
-                placeholder={t(SUGGESTIONS[0])}
+                placeholder={t(SUGGESTIONS[0].en)}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 aria-label={t("Search request")}
@@ -96,7 +132,7 @@ export default function AssistantPage() {
                   disabled={!query.trim() || action.pending}
                   onClick={() =>
                     void action.run(() =>
-                      api.assistantQuery({
+                      api.assistantQueryIn({
                         query: query.trim(),
                         capture_ids: corpus,
                         dry_run: dryRun,
@@ -171,7 +207,7 @@ export default function AssistantPage() {
             ) : capabilities.data ? (
               <div className="space-y-2 p-3 text-2xs">
                 <p className="text-text-muted">
-                  {String(capabilities.data.execution_model)}
+                  {t(String(capabilities.data.execution_model))}
                 </p>
                 <div>
                   <p className="text-text-faint">{t("queryable entities:")}</p>
@@ -181,42 +217,50 @@ export default function AssistantPage() {
                 </div>
                 <div>
                   <p className="text-text-faint">{t("external AI:")}</p>
-                  <Badge
-                    tone={
-                      (capabilities.data.external_ai as { enabled?: boolean })?.enabled
-                        ? "warn"
-                        : "ok"
-                    }
-                  >
-                    {String((capabilities.data.external_ai as { default?: string })?.default ?? "")}
-                  </Badge>
-                  {/* Named, so an analyst knows *what* would be contacted - never
-                      the key, which the API does not return. */}
                   {(() => {
-                    const external = capabilities.data.external_ai as {
-                      enabled?: boolean;
-                      provider?: string | null;
-                      model?: string | null;
-                      configured?: boolean;
-                    };
-                    if (!external?.enabled) return null;
+                    // The badge states what is actually true here. It used to
+                    // render a literal "disabled" the API always sent, so an
+                    // enabled, configured endpoint was labelled "disabled".
+                    const external = capabilities.data.external_ai as
+                      | {
+                          enabled?: boolean;
+                          configured?: boolean;
+                          provider?: string | null;
+                        }
+                      | undefined;
+                    if (!external?.enabled) {
+                      return (
+                        <Badge tone="ok">
+                          {t("external AI disabled")}
+                        </Badge>
+                      );
+                    }
                     return (
-                      <p className="mt-1 font-mono text-2xs text-text-faint">
-                        {external.configured
-                          ? t("Narration endpoint: {provider}", {
-                              provider: String(external.provider ?? "?"),
-                            })
-                          : t(
-                              "External AI is allowed, but no endpoint is configured; narration stays off.",
-                            )}
-                      </p>
+                      <div className="space-y-1">
+                        <Badge tone={external.configured ? "warn" : "info"}>
+                          {external.configured
+                            ? t("external AI enabled")
+                            : t("allowed, endpoint not configured")}
+                        </Badge>
+                        {/* Named, so an analyst knows *what* would be contacted -
+                            never the key, which the API does not return. */}
+                        <p className="font-mono text-2xs text-text-faint">
+                          {external.configured
+                            ? t("Narration endpoint: {provider}", {
+                                provider: String(external.provider ?? "?"),
+                              })
+                            : t(
+                                "External AI is allowed, but no endpoint is configured; narration stays off.",
+                              )}
+                        </p>
+                      </div>
                     );
                   })()}
                 </div>
                 <ul className="space-y-1">
                   {((capabilities.data.limitations ?? []) as string[]).map((item, index) => (
                     <li key={index} className="text-status-warn">
-                      • {item}
+                      • {t(String(item))}
                     </li>
                   ))}
                 </ul>
@@ -227,13 +271,13 @@ export default function AssistantPage() {
           <Panel title={t("Try one of these")}>
             <ul className="space-y-1 p-3">
               {SUGGESTIONS.map((suggestion) => (
-                <li key={suggestion}>
+                <li key={suggestion.en}>
                   <button
                     type="button"
                     className="link text-left text-2xs"
-                    onClick={() => setQuery(suggestion)}
+                    onClick={() => setQuery(suggestionText(suggestion, locale))}
                   >
-                    {t(suggestion)}
+                    {t(suggestion.en)}
                   </button>
                 </li>
               ))}
@@ -254,12 +298,12 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
       <Panel title={t("The assistant refused to guess")}>
         <div className="space-y-2 p-3">
           <Badge tone="warn">{t("needs clarification")}</Badge>
-          <p className="text-2xs text-text">{String(result.question ?? "")}</p>
-          <Caveat tone="warn">{String(result.note ?? "")}</Caveat>
+          <p className="text-2xs text-text">{t(String(result.question ?? ""))}</p>
+          <Caveat tone="warn">{t(String(result.note ?? ""))}</Caveat>
           <ul className="space-y-1">
             {((result.suggestions ?? []) as string[]).map((item) => (
               <li key={item} className="font-mono text-2xs text-text-muted">
-                {item}
+                {t(item)}
               </li>
             ))}
           </ul>
@@ -278,7 +322,9 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
           <Badge tone={result.executed ? "ok" : "info"}>
             {result.executed ? t("executed") : t("planned (dry run)")}
           </Badge>
-          <span className="text-2xs text-text-muted">{String(result.interpretation ?? "")}</span>
+          <span className="text-2xs text-text-muted">
+            {t(String(result.interpretation ?? ""))}
+          </span>
         </div>
 
         {plan && (
@@ -296,7 +342,7 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
           <ul className="space-y-1">
             {(result.warnings as string[]).map((warning, index) => (
               <li key={index} className="text-2xs text-status-warn">
-                ! {warning}
+                ! {t(warning)}
               </li>
             ))}
           </ul>
@@ -365,7 +411,7 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
             {(result.llm as { used?: boolean }).used === false &&
             (result.llm as { reason?: string }).reason ? (
               <p className="mt-1 text-2xs text-text-muted">
-                {String((result.llm as { reason?: string }).reason)}
+                {t(String((result.llm as { reason?: string }).reason))}
               </p>
             ) : (
               <p className="mt-1 whitespace-pre-wrap text-2xs text-text">
@@ -373,9 +419,11 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
               </p>
             )}
             <Caveat tone="warn">
-              {String(
-                (result.llm as { disclaimer?: string }).disclaimer ??
-                  t("Model-generated narration, not evidence."),
+              {t(
+                String(
+                  (result.llm as { disclaimer?: string }).disclaimer ??
+                    "Model-generated narration, not evidence.",
+                ),
               )}
             </Caveat>
           </div>

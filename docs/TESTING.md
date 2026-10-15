@@ -1,10 +1,10 @@
 # Testing
 
 ```bash
-# Backend - 242 tests (test_api_docs.py keeps docs/API.md honest; test_dependencies.py keeps pyproject honest)
+# Backend - 370 tests (test_api_docs.py keeps docs/API.md honest; test_dependencies.py keeps pyproject honest; test_prose_localization.py keeps the Russian catalogue honest)
 python -m pytest backend -q
 
-# Frontend - 113 tests
+# Frontend - 147 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -74,6 +74,12 @@ longer reproduces the models.
 | `test_anomaly_profile.py` | The numpy baseline finds planted outliers, is deterministic, and degrades honestly |
 | `test_llm_providers.py` | Narration providers over real HTTP; the API key never leaks |
 | `test_dependencies.py` | Every third-party import is declared in pyproject; no BOM in a source file |
+| `test_prose_localization.py` | Every sentence the API renders verbatim has a Russian entry, placeholders intact |
+| `test_narration_language.py` | The model is told which language to answer in; both provider spellings configure the same provider |
+| `test_anomaly_honesty.py` | The stated reason the forest was skipped is the real reason; corpora under the floor still train |
+| `test_assistant_russian.py` | A Russian question compiles to the same plan as its English twin |
+| `test_suggested_queries.py` | Every example the interface offers is one the compiler can actually run |
+| `test_framing_validation.py` | A framing rule the analyst supplied is refused with 422 before anything is written |
 | `test_tls_decryption.py` | TLS 1.2/1.3 round trips, and every refusal path (wrong key, flip, truncation, unsupported) |
 | `test_tls_keylog_api.py` | Key-log upload/list/delete, ownership, size ceiling, decrypt refusal |
 | `test_bind_config.py` | Bind/loopback security configuration |
@@ -101,6 +107,10 @@ longer reproduces the models.
 | `frontend/tests/message-table.test.tsx` | Message table windowing, tail clamping and the compare-limit selection |
 | `frontend/tests/anomalies-page.test.tsx` | Anomaly scoring: honest outage, ranked result and per-entity explanation |
 | `frontend/tests/graph-view.test.tsx` | Graph element mapping: node scale, hub flag, edges to filtered-out endpoints |
+| `frontend/tests/russian-ui.test.tsx` | A Russian interface shows no English sentences, and the provider badge states what is true |
+| `frontend/tests/russian-plurals.test.ts` | Russian counted nouns take one / two / five forms, including the 11-14 case |
+| `frontend/tests/russian-no-english-words.test.ts` | No unexplained Latin word survives inside a Russian translation |
+| `frontend/tests/assistant-suggestions.test.tsx` | Clicking a suggestion puts the language on screen into the query box |
 
 ## The test bench
 

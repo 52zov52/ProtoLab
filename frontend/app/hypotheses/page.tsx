@@ -501,7 +501,7 @@ export default function HypothesesPage() {
                     );
                   })}
                 </ul>
-                <Caveat tone="warn">{counterexamples.data.disclaimer}</Caveat>
+                <Caveat tone="warn">{t(String(counterexamples.data.disclaimer))}</Caveat>
               </div>
             ) : counterexamples.data ? (
               <EmptyState

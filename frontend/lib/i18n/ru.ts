@@ -400,6 +400,101 @@ export const RU_MESSAGES: Record<string, string> = {
   "Narration endpoint: {provider}": "Эндпоинт для формулировок: {provider}",
   "External AI is allowed, but no endpoint is configured; narration stays off.":
     "Внешний ИИ разрешён, но эндпоинт не настроен — формулировки остаются выключены.",
+  "allowed, endpoint not configured":
+    "разрешён, эндпоинт не настроен",
+
+  // ------------------------------------------------------------------------
+  // Prose the API hands the UI verbatim. Keys are the English source strings
+  // declared in backend/app/prose.py; backend/tests/test_prose_localization.py
+  // fails when one is changed without its translation here.
+  // ------------------------------------------------------------------------
+  "Requests are compiled into a typed query plan, schema-validated, checked against a field/operator allowlist, and executed through a fixed analytics API. No SQL, shell command or Python is ever generated from user text or from model output.":
+    "Запрос компилируется в типизированный план запроса, проверяется по схеме, сверяется с белым списком полей и операторов и выполняется через фиксированный аналитический API. Ни SQL, ни команда оболочки, ни код на Python не генерируются — ни из текста пользователя, ни из ответа модели.",
+  "External AI is off by default. Even when enabled it may only narrate already-validated results; it cannot execute queries, write files, or alter the investigation. Report generation additionally requires per-project consent in Project Settings. A hosted endpoint receives only redacted, aggregated findings - never packet bytes, never a capture file, never a key log.":
+    "Внешний ИИ по умолчанию выключен. Даже когда он включён, он лишь описывает уже проверенные результаты: не выполняет запросы, не пишет файлы и не меняет ход исследования. Для генерации отчёта дополнительно требуется согласие проекта в настройках проекта. Внешний эндпоинт получает только обезличенные сводные выводы — никогда байты пакетов, никогда файл захвата, никогда журнал ключей.",
+  "Searches run against plaintext payloads only; encrypted TLS content is not scanned unless a matching key log was supplied and decryption ran.":
+    "Поиск идёт только по открытому тексту; содержимое TLS не просматривается, если не был передан подходящий журнал ключей и не выполнялась расшифровка.",
+  "Request/response pairing is inferred from ordering, not from a request identifier, unless the interpretation defines one.":
+    "Сопоставление запроса и ответа выводится из порядка следования, а не из идентификатора запроса, если только интерпретация не задаёт такой идентификатор.",
+  "A JWT that decodes is not a JWT that is authentic; signatures are not verified here.":
+    "JWT, который декодируется, не обязательно является подлинным: подписи здесь не проверяются.",
+  "scikit-learn is installed, so a corpus of 50 or more messages trains an Isolation Forest. A smaller corpus trains a robust per-feature profile instead, and the training summary says so.":
+    "scikit-learn установлен, поэтому корпус из 50 и более сообщений обучает Isolation Forest. Корпус меньшего размера обучает устойчивый профиль по признакам, о чём сказано в итогах обучения.",
+  "scikit-learn is not installed in this deployment, so every baseline is trained as a robust per-feature profile (median and MAD). Install the 'analytics' extra for the Isolation Forest.":
+    "scikit-learn не установлен в этом развёртывании, поэтому любая базовая модель обучается как устойчивый профиль по признакам (медиана и MAD). Установите дополнение 'analytics', чтобы получить Isolation Forest.",
+  "Scores are relative outlier measures within this baseline corpus. A higher score means 'less typical than the training data'. It is not a probability of compromise and carries no severity ranking.":
+    "Оценки — относительная мера выброса внутри этого корпуса. Чем выше оценка, тем меньше сущности похожи на обучающие данные. Это не вероятность компрометации и не ранжирование по критичности.",
+  "The score is a distance from the baseline profile, measured in robust units per feature and averaged. A higher score means 'further from what this corpus usually looks like'. It is not a probability of compromise, carries no severity ranking, and is only comparable within this one baseline.":
+    "Оценка — расстояние до базового профиля в устойчивых единицах по каждому признаку, усреднённое по признакам. Чем выше оценка, тем дальше сущность от обычного вида этого корпуса. Это не вероятность компрометации, не ранжирование по критичности, и сравнивать оценки можно только внутри одной и той же базовой модели.",
+  "This baseline was trained without scikit-learn, so it uses a robust per-feature profile (median and MAD) instead of an Isolation Forest. Install the 'analytics' extra to train the forest model instead.":
+    "Эта базовая модель обучена без scikit-learn, поэтому используется устойчивый профиль по признакам (медиана и MAD) вместо Isolation Forest. Установите дополнение 'analytics', чтобы обучать лесную модель.",
+  "Only {count} training samples were available. A stable baseline needs several hundred; treat these scores as noisy.":
+    "Объём обучающей выборки мал: {count}. Для устойчивой базовой модели нужно несколько сотен; относитесь к этим оценкам как к шумным.",
+  "Only {count} training samples were available. A stable baseline needs several hundred; treat these scores as noisy. :: one":
+    "Доступен лишь {count} обучающий пример. Для устойчивой базовой модели нужно несколько сотен; относитесь к этим оценкам как к шумным.",
+  "Only {count} training samples were available. A stable baseline needs several hundred; treat these scores as noisy. :: few":
+    "Доступно лишь {count} обучающих примера. Для устойчивой базовой модели нужно несколько сотен; относитесь к этим оценкам как к шумным.",
+  "Only {count} training samples were available. A stable baseline needs several hundred; treat these scores as noisy. :: many":
+    "Доступно лишь {count} обучающих примеров. Для устойчивой базовой модели нужно несколько сотен; относитесь к этим оценкам как к шумным.",
+  "Only {count} samples were available, and an Isolation Forest needs 50 before its scores mean anything, so a robust per-feature profile was trained instead. Treat these scores as noisy: add captures to the corpus and retrain for the forest.":
+    "Объём выборки — {count}, а Isolation Forest требует 50, прежде чем его оценки что-то значат, поэтому вместо него обучен устойчивый профиль по признакам. Относитесь к этим оценкам как к шумным: добавьте захваты в корпус и переобучите модель для леса.",
+  "Only {count} samples were available, and an Isolation Forest needs 50 before its scores mean anything, so a robust per-feature profile was trained instead. Treat these scores as noisy: add captures to the corpus and retrain for the forest. :: one":
+    "Доступен лишь {count} пример, а Isolation Forest требует 50, прежде чем его оценки что-то значат, поэтому вместо него обучен устойчивый профиль по признакам. Относитесь к этим оценкам как к шумным: добавьте захваты в корпус и переобучите модель для леса.",
+  "Only {count} samples were available, and an Isolation Forest needs 50 before its scores mean anything, so a robust per-feature profile was trained instead. Treat these scores as noisy: add captures to the corpus and retrain for the forest. :: few":
+    "Доступно лишь {count} примера, а Isolation Forest требует 50, прежде чем его оценки что-то значат, поэтому вместо него обучен устойчивый профиль по признакам. Относитесь к этим оценкам как к шумным: добавьте захваты в корпус и переобучите модель для леса.",
+  "Only {count} samples were available, and an Isolation Forest needs 50 before its scores mean anything, so a robust per-feature profile was trained instead. Treat these scores as noisy: add captures to the corpus and retrain for the forest. :: many":
+    "Доступно лишь {count} примеров, а Isolation Forest требует 50, прежде чем его оценки что-то значат, поэтому вместо него обучен устойчивый профиль по признакам. Относитесь к этим оценкам как к шумным: добавьте захваты в корпус и переобучите модель для леса.",
+  "These features were constant across the baseline corpus and carry no information: {features}.":
+    "Эти признаки были постоянными по всему корпусу базовой модели и не несут информации: {features}.",
+
+  // ------------------------------------------------------------------------
+  // Investigation Assistant: what it says when it refuses, and why.
+  // ------------------------------------------------------------------------
+  "The assistant refused to guess. Narrow the request to one of the supported patterns, or use the structured query API directly.":
+    "Ассистент отказался угадывать. Сузьте запрос до одного из поддерживаемых шаблонов или используйте структурированный API запросов.",
+  "Dry run: the plan was compiled and validated but not executed.":
+    "Пробный запуск: план запроса скомпилирован и проверен, но не выполнен.",
+  "External AI is disabled. Set MPLAB_ALLOW_EXTERNAL_AI=true and point MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL at an endpoint (or run a local Ollama) to permit an optional narration pass.":
+    "Внешний ИИ выключен. Задайте MPLAB_ALLOW_EXTERNAL_AI=true и укажите эндпоинт в MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL (либо запустите локальный Ollama), чтобы разрешить необязательный проход с формулировками.",
+  "The request is empty.": "Запрос пуст.",
+  "The request could not be mapped to a supported query. Supported patterns include size comparisons ('responses longer than 1000 bytes'), leading-byte equality, request/response timing, and entropy thresholds.":
+    "Запрос не удалось сопоставить ни с одним поддерживаемым. Поддерживаются: сравнение по размеру («ответы длиннее 1000 байт»), равенство начальных байтов, тайминг запроса и ответа, пороги энтропии.",
+  "The query plan was rejected:": "План запроса отклонён:",
+  "Only 1 to 8 leading bytes can be compared; a wider comparison needs a rule the assistant does not have.":
+    "Сравнивать можно от 1 до 8 начальных байт; для более широкого сравнения нужен правило, которого у ассистента нет.",
+  "This groups messages that share a leading byte pattern; it does not assert that those bytes mean the same thing.":
+    "Это группирует сообщения с одинаковым шаблоном начальных байт; оно не утверждает, что эти байты означают одно и то же.",
+  "Request/response pairing is inferred from ordering and direction only; no request identifier is checked.":
+    "Сопоставление запроса и ответа выводится только из порядка и направления; идентификатор запроса не проверяется.",
+  "Decoding a JWT proves nothing about authenticity. The signature was not verified and the token must be treated as untrusted input.":
+    "Декодирование JWT ничего не говорит о подлинности. Подпись не проверялась, токен следует считать недоверенным вводом.",
+  "A POST search only works when HTTP content is visible. It cannot find requests inside TLS unless the session was decrypted.":
+    "Поиск POST работает только когда содержимое HTTP видно. Запросы внутри TLS он не найдёт, если сессия не была расшифрована.",
+  "JWT search runs only over plaintext payloads. Encrypted TLS payloads are never scanned for tokens.":
+    "Поиск JWT идёт только по открытому тексту. Содержимое TLS никогда не сканируется на токены.",
+  "Rate analysis is available through the Anomaly Detection module; it needs a trained baseline rather than a single-pass filter.":
+    "Анализ частот доступен в модуле обнаружения аномалий: ему нужна обученная базовая модель, а не одноразовый фильтр.",
+  "The value does not have a JWT structure.": "Значение не имеет структуры JWT.",
+  "The query is too long (limit 1000 characters).": "Запрос слишком длинный (предел 1000 символов).",
+  "This paragraph was generated by a language model from the facts above. It is narration, not evidence: verify every statement against the packets, bytes and validation results it refers to.":
+    "Этот абзац сгенерирован языковой моделью по приведённым выше фактам. Это формулировка, а не доказательство: проверьте каждое утверждение по пакетам, байтам и результатам проверок, на которые оно ссылается.",
+  "Model-generated narration. The counterexamples and validation results above are the evidence; this text only summarises them.":
+    "Формулировка, сгенерированная моделью. Доказательствами являются приведённые выше контрпримеры и результаты проверок; этот текст лишь их обобщает.",
+  "A counterexample shows where the rule did not hold on this corpus. It does not by itself prove the rule is wrong; a gap in the capture is an equally valid explanation until ruled out.":
+    "Контрпример показывает, где правило на этом корпусе не сработало. Сам по себе он не доказывает, что правило неверно: пробел в захвате — столь же допустимое объяснение, пока оно не исключено.",
+  "This timeline shows events observed in the capture. It does not prove the internal state of either TCP stack, and packets absent from the capture are simply unknown.":
+    "Эта лента показывает события, наблюдавшиеся в захвате. Она не доказывает внутреннее состояние ни одной из стеков TCP, а пакеты, отсутствующие в захвате, просто неизвестны.",
+  "These are candidates scored from observed bytes, not conclusions. Apply one and validate it against a corpus before treating it as the protocol's framing.":
+    "Это кандидаты, оценённые по наблюдавшимся байтам, а не выводы. Примените один и проверьте его на корпусе, прежде чем считать это фреймингом протокола.",
+  "An Isolation Forest needs {required} samples; this corpus has {count}, so the robust profile was used.":
+    "Isolation Forest требует {required} примеров, а в этом корпусе их {count}, поэтому использован устойчивый профиль.",
+  "scikit-learn is not installed in this deployment, so the robust profile is used.":
+    "scikit-learn не установлен в этом развёртывании, поэтому используется устойчивый профиль.",
+  "Detector": "Детектор",
+  "samples": "примеров",
+  "Isolation Forest": "Isolation Forest",
+  "robust profile": "устойчивый профиль",
+  "raw model JSON": "исходный JSON модели",
 
   "drag to pan · wheel or ± to zoom · reset fits the view · select a node on the canvas or from the centrality list":
     "перетаскивание — панорама · колесо или ± — зум · «сброс» вписывает граф · узел выбирается на холсте или в рейтинге центральности",
@@ -420,11 +515,11 @@ export const RU_MESSAGES: Record<string, string> = {
   "Decrypt a stream": "Расшифровать поток",
   "Decryption is only possible for the direction the key log belongs to, and only for cipher suites this build implements (TLS 1.2 AES-CBC/GCM, TLS 1.3 AES-GCM and ChaCha20-Poly1305). Everything else is reported as unsupported, never approximated.":
     "Расшифровка возможна только для того направления, которому принадлежит ключевой журнал, и только для наборов шифров, реализованных в этой сборке (TLS 1.2 AES-CBC/GCM, TLS 1.3 AES-GCM и ChaCha20-Poly1305). Всё остальное сообщается как неподдерживаемое и никогда не аппроксимируется.",
-  "Select a stream": "Выберите поток",
-  "Key log": "Ключевой журнал",
   "Select a key log": "Выберите ключевой журнал",
   Decrypt: "Расшифровать",
   "Decrypting…": "Расшифровка…",
+  "Select a stream": "Выберите поток",
+  "Key log": "Ключевой журнал",
   "No application records were found in this direction.":
     "В этом направлении не найдено прикладных записей.",
   "{bytes} byte(s) decrypted": "расшифровано байт: {bytes}",
@@ -433,7 +528,6 @@ export const RU_MESSAGES: Record<string, string> = {
   Record: "Запись",
   Plaintext: "Открытый текст",
   Detail: "Подробность",
-
   // ------------------------------------------------------------------------
   // Page fragments (see lib/i18n/locales/*)
   // ------------------------------------------------------------------------

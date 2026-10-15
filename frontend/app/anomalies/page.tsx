@@ -44,6 +44,69 @@ interface AnomalyRow {
   } | null;
 }
 
+function Line({ label, value }: { label: string; value: string | number }) {
+  return (
+    <p className="flex gap-2">
+      <span className="text-text-faint">{label}</span>
+      <span className="font-mono text-text">{value}</span>
+    </p>
+  );
+}
+
+/**
+ * The training summary, read rather than dumped.
+ *
+ * The API sends its sentences as English templates - the catalogue is keyed by
+ * that English, so the wording can be translated - and reports the counts
+ * separately. Rendering them as a raw JSON blob was both unreadable and
+ * untranslatable, which is why the prose moved into backend/app/prose.py.
+ */
+function LatestModelSummary({ model }: { model: Record<string, unknown> }) {
+  const { t } = useI18n();
+  const summary = (model.training_summary ?? {}) as Record<string, unknown>;
+  const warnings = (summary.warnings ?? []) as string[];
+  const sampleCount = Number(summary.sample_count ?? 0);
+  const constantFeatures = (summary.constant_features ?? []) as string[];
+  const params = {
+    count: sampleCount.toLocaleString("ru-RU"),
+    features: constantFeatures.join(", "),
+  };
+
+  return (
+    <div className="space-y-2 p-3 text-2xs">
+      <Line
+        label={t("Detector")}
+        value={summary.algorithm === "robust_profile" ? t("robust profile") : t("Isolation Forest")}
+      />
+      <Line label={t("samples")} value={sampleCount.toLocaleString("ru-RU")} />
+      {summary.forest_unavailable_reason ? (
+        <Caveat tone="warn">
+          {summary.forest_unavailable_reason === "insufficient_samples"
+            ? t(
+                "An Isolation Forest needs {required} samples; this corpus has {count}, so the robust profile was used.",
+                { ...params, required: Number(summary.forest_required_samples ?? 0).toLocaleString("ru-RU") },
+              )
+            : t(
+                "scikit-learn is not installed in this deployment, so the robust profile is used.",
+              )}
+        </Caveat>
+      ) : null}
+      {warnings.map((warning) => (
+        <Caveat key={warning} tone="warn">
+          {t(warning, params)}
+        </Caveat>
+      ))}
+      <Caveat>{t(String(summary.interpretation ?? ""))}</Caveat>
+      <details className="text-text-faint">
+        <summary className="cursor-pointer select-none">{t("raw model JSON")}</summary>
+        <pre className="mt-1 max-h-96 overflow-auto rounded-sm border border-line bg-surface-sunken p-2 font-mono">
+          {JSON.stringify(model, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 export default function AnomaliesPage() {
   const workspace = useWorkspace();
   const { t } = useI18n();
@@ -90,7 +153,7 @@ export default function AnomaliesPage() {
             <div className="space-y-2 p-3">
               <Badge tone="warn">{t("scikit-learn is not installed")}</Badge>
               <p className="text-2xs text-text-muted">
-                {String(status.data?.availability_note ?? "")}
+                {t(String(status.data?.availability_note ?? ""))}
               </p>
               <pre className="overflow-x-auto rounded-sm border border-line bg-surface-sunken p-2 font-mono text-2xs">
 {`python -m pip install "madrigal-protocol-lab-backend[analytics]"`}
@@ -124,17 +187,7 @@ export default function AnomaliesPage() {
 
             {latest && (
               <Panel title={t("Latest model")}>
-                <div className="space-y-2 p-3 font-mono text-2xs">
-                  <pre className="max-h-96 overflow-auto rounded-sm border border-line bg-surface-sunken p-2">
-                    {JSON.stringify(latest, null, 2)}
-                  </pre>
-                  <Caveat>
-                    {String(
-                      (latest.training_summary as { interpretation?: string })?.interpretation ??
-                        "",
-                    )}
-                  </Caveat>
-                </div>
+                <LatestModelSummary model={latest} />
               </Panel>
             )}
 
@@ -491,7 +544,7 @@ function ScoreResult({ result }: { result: Record<string, unknown> }) {
         )}
 
         <div className="px-3 pb-3">
-          <Caveat>{String(result.interpretation ?? "")}</Caveat>
+          <Caveat>{t(String(result.interpretation ?? ""))}</Caveat>
         </div>
       </div>
     </Panel>

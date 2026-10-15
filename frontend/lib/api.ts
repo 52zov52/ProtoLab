@@ -11,6 +11,9 @@
 
 import { z } from "zod";
 
+import { getActiveLocale } from "@/lib/format";
+import { translate } from "@/lib/i18n";
+
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8010";
 
@@ -23,7 +26,12 @@ export class ApiError extends Error {
     message: string,
     readonly details: unknown = null,
   ) {
-    super(message);
+    // The API explains failures in English, and every one of those explanations
+    // reaches the analyst's screen. Translating here rather than at each call
+    // site means a new endpoint cannot introduce untranslated text by being
+    // wired up: `translate` falls back to the English source, so a message with
+    // no catalogue entry stays readable instead of disappearing.
+    super(translate(getActiveLocale(), message));
     this.name = "ApiError";
   }
 }
@@ -699,12 +707,25 @@ export const api = {
   assistantQuery: (body: Record<string, unknown>) =>
     request("/api/assistant/query", z.record(z.string(), z.unknown()), json(body)),
 
+  /** The locale the narration should be written in, sent with the request.
+   *
+   * The model defaults to English, so without this a Russian interface shows a
+   * Russian question answered in English. Explicit, rather than guessed from a
+   * header, because the answer is rendered next to the interface it belongs to.
+   */
+  assistantQueryIn: (body: Record<string, unknown>) =>
+    request(
+      "/api/assistant/query",
+      z.record(z.string(), z.unknown()),
+      json({ ...body, locale: getActiveLocale() }),
+    ),
+
   // -- output -----------------------------------------------------------
   report: (projectId: string, body: Record<string, unknown>) =>
     request(
       `/api/projects/${assertId(projectId, "project_id")}/reports`,
       z.record(z.string(), z.unknown()),
-      json(body),
+      json({ ...body, locale: getActiveLocale() }),
     ),
   reports: (projectId: string) =>
     request(
