@@ -130,6 +130,37 @@ def test_an_unreadable_answer_is_reported_rather_than_returned_empty(stub):
     assert API_KEY not in str(excinfo.value)
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (401, "API key"),
+        (402, "credit"),
+        (403, "403"),
+        (404, "model id"),
+        (429, "rate-limiting"),
+    ],
+)
+def test_each_http_status_is_explained_rather_than_left_bare(stub, status, expected):
+    """A free tier being busy is normal; a wrong key is a configuration error.
+
+    Both are reported as themselves, because "HTTP 429" alone tells an operator
+    nothing about whether to wait, change the key, or give up.
+    """
+    StubHandler.status = status
+    StubHandler.reply = {"error": {"message": f"upstream said something about {API_KEY}"}}
+    provider = OpenAICompatibleProvider(
+        base_url=stub + "/v1", api_key=API_KEY, model="free-model"
+    )
+
+    with pytest.raises(LLMUnavailable) as excinfo:
+        provider.complete("s", "u", max_chars=100)
+
+    message = str(excinfo.value)
+    assert expected in message
+    assert str(status) in message
+    assert API_KEY not in message
+
+
 def test_an_unreachable_endpoint_reports_the_endpoint_not_a_key(stub):
     provider = OpenAICompatibleProvider(
         base_url="http://127.0.0.1:1/v1", api_key=API_KEY, model="free-model"

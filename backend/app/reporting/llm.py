@@ -35,6 +35,23 @@ log = get_logger("mplab.llm")
 MAX_RESPONSE_BYTES = 200_000
 REQUEST_TIMEOUT_SECONDS = 60
 
+# What an HTTP status means to the operator. Free tiers of hosted providers are
+# rate-limited as a matter of course, so "busy" must not read as "broken".
+_HTTP_REASON = {
+    400: "The narration endpoint rejected the request (HTTP 400). The model id may "
+    "be one this endpoint does not serve.",
+    401: "The narration endpoint refused the configured API key (HTTP 401).",
+    402: "The narration endpoint reported no remaining credit (HTTP 402).",
+    403: "The narration endpoint refused this key for this model (HTTP 403); free "
+    "models are sometimes restricted per account.",
+    404: "The narration endpoint has no such model (HTTP 404). Check the model id.",
+    429: "The narration endpoint is rate-limiting requests (HTTP 429). This is "
+    "normal on a free tier; the application continues to work, without narration.",
+    500: "The narration endpoint failed internally (HTTP 500).",
+    502: "The narration endpoint's upstream failed (HTTP 502).",
+    503: "The narration endpoint is unavailable (HTTP 503).",
+}
+
 
 class LLMUnavailable(Exception):
     """The configured provider is not reachable or not permitted."""
@@ -185,10 +202,11 @@ class OpenAICompatibleProvider:
                 raw = response.read(MAX_RESPONSE_BYTES)
         except urllib.error.HTTPError as exc:
             # The response body can contain the key on some gateways, so only the
-            # status is reported.
-            raise LLMUnavailable(
-                f"The narration endpoint answered HTTP {exc.code}."
-            ) from exc
+            # status is reported - but each status means something different to an
+            # operator, and a free tier being busy is not a defect.
+            raise LLMUnavailable(_HTTP_REASON.get(exc.code, "the endpoint failed").format(
+                code=exc.code
+            )) from exc
         except (urllib.error.URLError, OSError, TimeoutError) as exc:
             raise LLMUnavailable(
                 f"The narration endpoint is not reachable: {exc}"
