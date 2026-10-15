@@ -158,6 +158,9 @@ def train_isolation_forest(
         "contamination": contamination,
         "n_estimators": n_estimators,
         "seed": seed,
+        # Named in the summary as well as in the stored model, so the raw JSON an
+        # operator reads says which detector produced these numbers.
+        "algorithm": "isolation_forest",
         "score_min": float(np.min(inlier_scores)),
         "score_max": float(np.max(inlier_scores)),
         "score_mean": float(np.mean(inlier_scores)),

@@ -351,10 +351,27 @@ function ResultView({ result }: { result: Record<string, unknown> }) {
 
         {typeof result.llm === "object" && result.llm !== null && (
           <div className="rounded-sm border border-status-warn/30 bg-status-warn/5 p-2.5">
-            <Badge tone="warn">{t("model narration")}</Badge>
-            <p className="mt-1 whitespace-pre-wrap text-2xs text-text">
-              {String((result.llm as { text?: string }).text ?? "")}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="warn">{t("model narration")}</Badge>
+              {/* Which endpoint answered - or why it did not. An empty box with
+                  a badge and no text is the least useful thing this panel could
+                  show, and the reason is the part an operator needs. */}
+              {(result.llm as { provider?: string }).provider ? (
+                <span className="font-mono text-2xs text-text-faint">
+                  {String((result.llm as { provider?: string }).provider)}
+                </span>
+              ) : null}
+            </div>
+            {(result.llm as { used?: boolean }).used === false &&
+            (result.llm as { reason?: string }).reason ? (
+              <p className="mt-1 text-2xs text-text-muted">
+                {String((result.llm as { reason?: string }).reason)}
+              </p>
+            ) : (
+              <p className="mt-1 whitespace-pre-wrap text-2xs text-text">
+                {String((result.llm as { text?: string }).text ?? "")}
+              </p>
+            )}
             <Caveat tone="warn">
               {String(
                 (result.llm as { disclaimer?: string }).disclaimer ??

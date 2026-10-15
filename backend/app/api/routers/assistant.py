@@ -149,8 +149,10 @@ def assistant_query(payload: AssistantQuery, session: SessionDep, settings: Sett
             response["llm"] = {
                 "used": False,
                 "reason": (
-                    "External AI is disabled. Enable MPLAB_ALLOW_EXTERNAL_AI to permit "
-                    "an optional local Ollama narration pass."
+                    "External AI is disabled. Set MPLAB_ALLOW_EXTERNAL_AI=true and "
+                    "point MPLAB_LLM_BASE_URL / MPLAB_LLM_API_KEY / MPLAB_LLM_MODEL at "
+                    "an endpoint (or run a local Ollama) to permit an optional "
+                    "narration pass."
                 ),
             }
         else:
