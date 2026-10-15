@@ -289,8 +289,6 @@ export const RU_MESSAGES: Record<string, string> = {
   reset: "сброс",
   "Network graph with {nodes} nodes and {edges} edges":
     "Граф сети: узлов {nodes}, рёбер {edges}",
-  "drag to pan · wheel or ± to zoom · double-click to reset":
-    "перетаскивание — сдвиг · колесо или ± — масштаб · двойной щелчок — сброс",
   "nodes: {nodes} · edges: {edges} · {bytes} bytes observed":
     "узлов: {nodes} · рёбер: {edges} · наблюдается {bytes} байт",
   "{count} hub candidate(s)": "кандидатов в узлы-концентраторы: {count}",
@@ -402,6 +400,9 @@ export const RU_MESSAGES: Record<string, string> = {
   "Narration endpoint: {provider}": "Эндпоинт для формулировок: {provider}",
   "External AI is allowed, but no endpoint is configured; narration stays off.":
     "Внешний ИИ разрешён, но эндпоинт не настроен — формулировки остаются выключены.",
+
+  "drag to pan · wheel or ± to zoom · reset fits the view · select a node on the canvas or from the centrality list":
+    "перетаскивание — панорама · колесо или ± — зум · «сброс» вписывает граф · узел выбирается на холсте или в рейтинге центральности",
 
   Stream: "Поток",
   "mean {value}": "среднее {value}",

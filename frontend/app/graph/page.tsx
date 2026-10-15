@@ -1,8 +1,13 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
+import {
+  GraphView,
+  type GraphHandle,
+  type GraphNode,
+} from "@/components/graph-view";
 import {
   Badge,
   Caveat,
@@ -51,15 +56,9 @@ export default function GraphPage() {
   const projectId = params.get("project") ?? workspace.projectId;
   const [selected, setSelected] = useState<string | null>(null);
   const [minBytes, setMinBytes] = useState(0);
-  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
-  const [drag, setDrag] = useState<{
-    startX: number;
-    startY: number;
-    originX: number;
-    originY: number;
-    scale: number;
-  } | null>(null);
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  // Pan, zoom and layout live inside the graph component; the page only needs
+  // to be able to ask for a zoom or a reset.
+  const graphRef = useRef<GraphHandle | null>(null);
 
   const captures = useAsync(
     () => (projectId ? api.projectCaptures(projectId) : Promise.resolve([])),
@@ -111,45 +110,11 @@ export default function GraphPage() {
     [edges, protocolFilter],
   );
 
-  const layout = useMemo(() => {
-    // A deterministic circular layout: reproducible across renders, which a
-    // force simulation would not be.
-    const size = 420;
-    const radius = size / 2 - 40;
-    const positions = new Map<string, { x: number; y: number }>();
-    nodes.forEach((node, index) => {
-      const angle = (index / Math.max(1, nodes.length)) * Math.PI * 2 - Math.PI / 2;
-      positions.set(node.id, {
-        x: size / 2 + Math.cos(angle) * radius,
-        y: size / 2 + Math.sin(angle) * radius,
-      });
-    });
-    return { size, positions };
-  }, [nodes]);
-
-  const maxBytes = Math.max(1, ...nodes.map((n) => n.bytes_total));
   const centrality = (graph.data?.centrality ?? []) as {
     rank: number;
     label: string;
     node: Node;
   }[];
-
-  // Zoom with the wheel. Registered non-passively so the page does not scroll
-  // while the pointer is over the graph.
-  useEffect(() => {
-    const element = svgRef.current;
-    if (!element) return;
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      setView((current) => {
-        const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
-        const k = Math.min(4, Math.max(0.4, current.k * factor));
-        return { ...current, k };
-      });
-    };
-    element.addEventListener("wheel", onWheel, { passive: false });
-    return () => element.removeEventListener("wheel", onWheel);
-  }, [graph.data]);
 
   const legendProtocols = useMemo(() => {
     const names = new Set<string>();
@@ -273,9 +238,7 @@ export default function GraphPage() {
                       type="button"
                       className="btn"
                       title={t("Zoom out")}
-                      onClick={() =>
-                        setView((v) => ({ ...v, k: Math.max(0.4, v.k / 1.2) }))
-                      }
+                      onClick={() => graphRef.current?.zoomOut()}
                     >
                       −
                     </button>
@@ -283,138 +246,31 @@ export default function GraphPage() {
                       type="button"
                       className="btn"
                       title={t("Zoom in")}
-                      onClick={() =>
-                        setView((v) => ({ ...v, k: Math.min(4, v.k * 1.2) }))
-                      }
+                      onClick={() => graphRef.current?.zoomIn()}
                     >
                       +
                     </button>
                     <button
                       type="button"
                       className="btn"
-                      onClick={() => setView({ x: 0, y: 0, k: 1 })}
+                      onClick={() => graphRef.current?.reset()}
                     >
                       {t("reset")}
                     </button>
                   </div>
                 </div>
-                <svg
-                  ref={svgRef}
-                  viewBox={`0 0 ${layout.size} ${layout.size}`}
-                  className={cn(
-                    "mx-auto h-auto w-full max-w-[560px] touch-none select-none",
-                    drag ? "cursor-grabbing" : "cursor-grab",
-                  )}
-                  role="img"
-                  aria-label={t("Network graph with {nodes} nodes and {edges} edges", {
-                    nodes: nodes.length,
-                    edges: edgesShown.length,
-                  })}
-                  onMouseDown={(event) => {
-                    const rect = svgRef.current?.getBoundingClientRect();
-                    if (!rect) return;
-                    setDrag({
-                      startX: event.clientX,
-                      startY: event.clientY,
-                      originX: view.x,
-                      originY: view.y,
-                      scale: layout.size / rect.width,
-                    });
-                  }}
-                  onMouseMove={(event) => {
-                    if (!drag) return;
-                    setView((v) => ({
-                      ...v,
-                      x: drag.originX + (event.clientX - drag.startX) * drag.scale,
-                      y: drag.originY + (event.clientY - drag.startY) * drag.scale,
-                    }));
-                  }}
-                  onMouseUp={() => setDrag(null)}
-                  onMouseLeave={() => setDrag(null)}
-                  onDoubleClick={() => setView({ x: 0, y: 0, k: 1 })}
-                >
-                  <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
-                    <g>
-                      {edgesShown.map((edge, index) => {
-                        const a = layout.positions.get(edge.source);
-                        const b = layout.positions.get(edge.target);
-                        if (!a || !b) return null;
-                        const active =
-                          selected === edge.source || selected === edge.target;
-                        return (
-                          <line
-                            key={index}
-                            x1={a.x}
-                            y1={a.y}
-                            x2={b.x}
-                            y2={b.y}
-                            stroke={active ? "#3fb6c8" : edgeColor(edge)}
-                            strokeWidth={1 + (edge.bytes_total / maxBytes) * 6}
-                            strokeOpacity={active ? 0.95 : selected ? 0.25 : 0.6}
-                          />
-                        );
-                      })}
-                    </g>
-                    <g>
-                      {nodes.map((node) => {
-                        const point = layout.positions.get(node.id);
-                        if (!point) return null;
-                        const r = 5 + (node.bytes_total / maxBytes) * 14;
-                        const active = node.id === selected;
-                        return (
-                          <g
-                            key={node.id}
-                            onClick={() => setSelected(active ? null : node.id)}
-                            className="cursor-pointer"
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                setSelected(active ? null : node.id);
-                              }
-                            }}
-                          >
-                            {node.hub_candidate ? (
-                              <circle
-                                cx={point.x}
-                                cy={point.y}
-                                r={r + 4}
-                                fill="none"
-                                stroke="#c9a227"
-                                strokeWidth={1.5}
-                                strokeDasharray="3 2"
-                              />
-                            ) : null}
-                            <circle
-                              cx={point.x}
-                              cy={point.y}
-                              r={r}
-                              fill={active ? "#3fb6c8" : "#171b21"}
-                              stroke={
-                                active
-                                  ? "#3fb6c8"
-                                  : node.hub_candidate
-                                    ? "#c9a227"
-                                    : "#8d97a3"
-                              }
-                              strokeWidth={1.5}
-                            />
-                            <text
-                              x={point.x}
-                              y={point.y + r + 11}
-                              textAnchor="middle"
-                              className="fill-[#8d97a3] font-mono text-[9px]"
-                            >
-                              {node.label}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </g>
-                  </g>
-                </svg>
+                <GraphView
+                  nodes={nodes as GraphNode[]}
+                  edges={edgesShown}
+                  colorFor={(protocols) => edgeColor({ protocols } as never)}
+                  selected={selected}
+                  onSelect={setSelected}
+                  handleRef={graphRef}
+                />
                 <p className="mt-1 text-2xs text-text-faint">
-                  {t("drag to pan · wheel or ± to zoom · double-click to reset")}
+                  {t(
+                    "drag to pan · wheel or ± to zoom · reset fits the view · select a node on the canvas or from the centrality list",
+                  )}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs text-text-faint">
                   <span>

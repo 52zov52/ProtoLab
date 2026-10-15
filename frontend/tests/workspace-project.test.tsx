@@ -80,8 +80,10 @@ describe("active project validation", () => {
       expect(screen.getByTestId("project-id")).toHaveTextContent("none"),
     );
     expect(screen.getByTestId("project-name")).toHaveTextContent("none");
-    // ...and must not resurrect it on the next reload.
-    expect(window.localStorage.getItem("mplab.workspace")).toBeNull();
+    // ...and must not resurrect it on the next reload. Waiting rather than
+    // asserting in the same tick: the selection clears first and the persisted
+    // entry follows, and asserting between the two is a coin toss.
+    await waitFor(() => expect(window.localStorage.getItem("mplab.workspace")).toBeNull());
   });
 
   it("drops a project id that arrived in the URL", async () => {

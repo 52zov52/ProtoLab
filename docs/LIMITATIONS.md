@@ -12,15 +12,16 @@ state.
 
 ### UI libraries from §4 that were not adopted
 
-**shadcn/ui and a graph library (D3.js / Cytoscape.js) are not used.**
-
-The §4 stack was adopted where it changes what the analyst can do:
+**shadcn/ui is not used.** The §4 stack was adopted where it changes what the
+analyst can do:
 
 - TanStack Table + TanStack Virtual — packet and message tables (windowing,
   sorting) in `components/packet-table.tsx` and `components/message-table.tsx`.
 - Recharts — the outlier-score ranking on the Anomaly Detection page.
 - Monaco Editor — the interpretation editor, bundled locally in
   `components/spec-editor.tsx` with a textarea fallback.
+- Cytoscape.js — the interaction graph in `components/graph-view.tsx`: a
+  force-directed layout (`cose`), pan/pinch/box zoom and curve-aware hit testing.
 
 What was deliberately left as it is:
 
@@ -29,14 +30,15 @@ What was deliberately left as it is:
   the graphite design tokens in one place. Migrating them to shadcn would move
   that vocabulary into generated files without adding a capability, and would
   add a per-component dependency on the component registry's version.
-- **D3.js / Cytoscape.js.** The network graph is a small SVG that already pans,
-  zooms, colours edges by detected protocol and marks hub candidates. Its
-  layout is deterministic circular, which is a property worth keeping (the same
-  capture always draws the same picture); a force simulation would not be.
 
-Both are recorded as deviations from §4 rather than as gaps to be filled later.
-If the graph later needs thousands of nodes to stay interactive, a switch to
-Cytoscape is the natural place to spend that complexity.
+One honest cost of the Cytoscape swap: **the canvas is not keyboard
+navigable.** The centrality ranking next to the graph lists the same nodes as
+buttons and stays the keyboard path to a selection, and the panel says so. The
+hand-rolled SVG this replaced did have per-node `tabIndex`, so this is a
+regression in one dimension and a gain in several others.
+
+Both the shadcn deviation and this cost are recorded here rather than left for
+someone to discover.
 
 ### TLS decryption via `SSLKEYLOGFILE`
 

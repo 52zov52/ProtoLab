@@ -62,7 +62,7 @@
 | Next.js / React / TS strict / Tailwind / Zod | ✅ | Next 16.4, React 19, TS strict, Tailwind v4, Zod |
 | shadcn/ui | ❌ | свои компоненты в `components/ui.tsx` (отклонение зафиксировано в `docs/LIMITATIONS.md`) |
 | TanStack Table + Virtual | ✅ | таблицы пакетов и сообщений (`components/packet-table.tsx`, `components/message-table.tsx`) |
-| D3.js / Cytoscape.js | ❌ | свой SVG-граф (отклонение зафиксировано в `docs/LIMITATIONS.md`) |
+| D3.js / Cytoscape.js | ✅ | граф на Cytoscape (`components/graph-view.tsx`), силовая раскладка `cose` |
 | Recharts | ✅ | рейтинг выбросов на странице аномалий (бандл-режим, без CDN) |
 | Monaco Editor | ✅ | редактор спецификации (`components/spec-editor.tsx`, bundл + textarea как fallback) |
 | FastAPI/Pydantic/SQLAlchemy/SQLite | ✅ | |
@@ -373,9 +373,11 @@ diff-heatmap, обучения модели аномалий и интеракт
 «Кадр данных» — не вероятности и не тяжесть уязвимости: подпись говорит об этом
 напрямую.
 
-**Отклонения (честно):** D3/Cytoscape для графа — оставлен собственный SVG
-(интерактив pan/zoom уже есть); shadcn/ui — оставлен `components/ui.tsx`.
-Оба отклонения описаны в `docs/LIMITATIONS.md`.
+**Отклонение (честно):** shadcn/ui — оставлен `components/ui.tsx`: он уже даёт
+нужные примитивы и дизайн-токены в одном месте, а миграция в сгенерированные
+файлы не добавляет ни одной возможности. Описано в `docs/LIMITATIONS.md` вместе
+с ценой перехода графа на canvas (канвас недоступен с клавиатуры; клавиатурный
+путь к узлу остаётся через рейтинг центральности).
 
 Проверено вживую: Monaco монтируется в браузере (номера строк, подсветка
 токенов, 27 строк спецификации), счётчик тестов 103 в 20 файлах, `tsc`, `eslint`
@@ -706,7 +708,7 @@ id гипотез, сохранение временных меток и дан�
    ↓
 Этап 4  Примеры (§31 п.9–14) + машиночитаемая спецификация  ✅ (examples/ + build_examples.py + test_examples.py)
 Этап 5  Тесты (§23): frontend-сценарии + регрессии + E2E  ✅ (page-сценарии §23: пакеты, сессии, проекты, отчёты, потоки, пустые состояния; регрессии + CI)
-Этап 6  Стек §4: TanStack Table + Virtual, Recharts, Monaco  ✅ (таблицы пакетов и сообщений, график выбросов, Monaco-редактор; D3 и shadcn — отклонения, см. LIMITATIONS.md)
+Этап 6  Стек §4: TanStack Table + Virtual, Recharts, Monaco, Cytoscape  ✅ (таблицы пакетов и сообщений, график выбросов, Monaco-редактор, граф на Cytoscape; shadcn — отклонение, см. LIMITATIONS.md)
 Этап 7  Alembic-миграции  ✅ (alembic.ini + 0001_initial + самонакат на старте + тест эквивалентности)
 Этап 8  Локализация RU/EN  ✅ (i18n + каталог RU + переключатель + тест покрытия; доп.: удаление проекта, фильтр протоколов, фикс вёрстки)
    ↓

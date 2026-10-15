@@ -4,7 +4,7 @@
 # Backend - 229 tests (test_api_docs.py keeps docs/API.md honest)
 python -m pytest backend -q
 
-# Frontend - 103 tests
+# Frontend - 113 tests
 cd frontend && npm test
 
 # Type safety and lint (Next 16 removed `next lint`; ESLint runs via the CLI)
@@ -99,6 +99,7 @@ longer reproduces the models.
 | `frontend/tests/packet-table.test.tsx` | Packet table windowing (window + clamping) and sorting over the loaded page |
 | `frontend/tests/message-table.test.tsx` | Message table windowing, tail clamping and the compare-limit selection |
 | `frontend/tests/anomalies-page.test.tsx` | Anomaly scoring: honest outage, ranked result and per-entity explanation |
+| `frontend/tests/graph-view.test.tsx` | Graph element mapping: node scale, hub flag, edges to filtered-out endpoints |
 
 ## The test bench
 
