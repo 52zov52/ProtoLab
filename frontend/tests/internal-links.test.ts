@@ -142,3 +142,37 @@ describe("cross-page links carry what the target reads", () => {
     },
   );
 });
+
+describe("every sidebar destination is a route", () => {
+  /**
+   * The overview is `/` while the sidebar calls it "Overview" - so the name the
+   * interface shows and the path it lives at differ. That gap is where a shared
+   * link comes from: I handed over `/overview?project=…` and it 404'd, because
+   * the string the interface shows was not a string that resolved.
+   *
+   * The sidebar is the list of destinations this product offers, so every entry
+   * in it is a link somebody will paste. They all have to resolve.
+   */
+  const sidebar = readFileSync(
+    join(process.cwd(), "components", "sidebar.tsx"),
+    "utf8",
+  );
+
+  const destinations = [
+    ...sidebar.matchAll(/href:\s*"([^"]+)"/g),
+  ].map((match) => match[1]);
+
+  it("the list was actually read", () => {
+    expect(destinations.length).toBeGreaterThan(10);
+  });
+
+  it.each(destinations)("the sidebar link %s resolves", (href) => {
+    expect(KNOWN.has(href), `${href} is not a route`).toBe(true);
+  });
+
+  it("the overview is reachable under the name the interface shows", () => {
+    // Not a redirect requirement - a paste-ability one. The sidebar says
+    // "Overview"; a link built from that word should land on the overview.
+    expect(KNOWN.has("/overview")).toBe(true);
+  });
+});
