@@ -1,7 +1,7 @@
 # Testing
 
 ```bash
-# Backend - 370 tests (test_api_docs.py keeps docs/API.md honest; test_dependencies.py keeps pyproject honest; test_prose_localization.py keeps the Russian catalogue honest)
+# Backend - 431 tests (test_api_docs.py keeps docs/API.md honest; test_dependencies.py keeps pyproject honest; test_prose_localization.py keeps the Russian catalogue honest; test_routes_answer.py walks every documented endpoint)
 python -m pytest backend -q
 
 # Frontend - 161 tests
@@ -80,6 +80,7 @@ longer reproduces the models.
 | `test_assistant_russian.py` | A Russian question compiles to the same plan as its English twin |
 | `test_suggested_queries.py` | Every example the interface offers is one the compiler can actually run |
 | `test_framing_validation.py` | A framing rule the analyst supplied is refused with 422 before anything is written |
+| `test_routes_answer.py` | Every documented GET route answers, including the ones the interface never calls |
 | `test_tls_decryption.py` | TLS 1.2/1.3 round trips, and every refusal path (wrong key, flip, truncation, unsupported) |
 | `test_tls_keylog_api.py` | Key-log upload/list/delete, ownership, size ceiling, decrypt refusal |
 | `test_bind_config.py` | Bind/loopback security configuration |
