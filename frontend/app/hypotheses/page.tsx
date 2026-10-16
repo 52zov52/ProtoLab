@@ -530,13 +530,13 @@ export default function HypothesesPage() {
                     {((support.data.explicitly_unsupported ?? []) as string[]).map(
                       (item, index) => (
                         <li key={index} className="text-status-warn">
-                          • {item}
+                          • {t(item)}
                         </li>
                       ),
                     )}
                   </ul>
                 </div>
-                <Caveat>{String(support.data.safety)}</Caveat>
+                <Caveat>{t(String(support.data.safety))}</Caveat>
               </div>
             </Panel>
           )}

@@ -109,6 +109,25 @@ NARRATION_DISCLAIMER_REPORT = (
     "above are the evidence; this text only summarises them."
 )
 
+# --- What the specification format can and cannot express --------------------
+
+UNSUPPORTED_BIT_FIELDS = (
+    "bit-level fields (use a whole-byte field and mask it manually)"
+)
+UNSUPPORTED_COMPUTED_FIELDS = (
+    "computed or derived fields (no expression language is evaluated)"
+)
+UNSUPPORTED_VARIABLE_NUMERIC = (
+    "variable-length numeric fields other than through a repeat group"
+)
+UNSUPPORTED_CHECKSUM = "checksum verification (no checksum algorithm is assumed or computed)"
+UNSUPPORTED_CONDITIONAL_FRAMING = "conditional framing (framing is fixed per specification)"
+
+SPEC_SAFETY = (
+    "Specifications are interpreted as data. No code from a specification "
+    "is ever imported, compiled or executed."
+)
+
 COUNTEREXAMPLE_DISCLAIMER = (
     "A counterexample shows where the rule did not hold on this corpus. "
     "It does not by itself prove the rule is wrong; a gap in the capture is "
@@ -225,6 +244,12 @@ ALL: tuple[str, ...] = (
     CONSTANT_FEATURES,
     NARRATION_DISCLAIMER,
     NARRATION_DISCLAIMER_REPORT,
+    UNSUPPORTED_BIT_FIELDS,
+    UNSUPPORTED_COMPUTED_FIELDS,
+    UNSUPPORTED_VARIABLE_NUMERIC,
+    UNSUPPORTED_CHECKSUM,
+    UNSUPPORTED_CONDITIONAL_FRAMING,
+    SPEC_SAFETY,
     COUNTEREXAMPLE_DISCLAIMER,
     TIMELINE_DISCLAIMER,
     FRAMING_DISCLAIMER,

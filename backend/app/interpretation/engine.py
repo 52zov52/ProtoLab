@@ -26,6 +26,8 @@ from typing import Any, Literal, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
+from .. import prose
+
 SPEC_SCHEMA_VERSION = "1.0"
 ENGINE_VERSION = "interpretation-engine/1.2"
 
@@ -842,14 +844,11 @@ def describe_support() -> dict[str, Any]:
             "max_document_bytes": MAX_SPEC_BYTES,
         },
         "explicitly_unsupported": [
-            "bit-level fields (use a whole-byte field and mask it manually)",
-            "computed or derived fields (no expression language is evaluated)",
-            "variable-length numeric fields other than through a repeat group",
-            "checksum verification (no checksum algorithm is assumed or computed)",
-            "conditional framing (framing is fixed per specification)",
+            prose.UNSUPPORTED_BIT_FIELDS,
+            prose.UNSUPPORTED_COMPUTED_FIELDS,
+            prose.UNSUPPORTED_VARIABLE_NUMERIC,
+            prose.UNSUPPORTED_CHECKSUM,
+            prose.UNSUPPORTED_CONDITIONAL_FRAMING,
         ],
-        "safety": (
-            "Specifications are interpreted as data. No code from a specification "
-            "is ever imported, compiled or executed."
-        ),
+        "safety": prose.SPEC_SAFETY,
     }

@@ -498,6 +498,19 @@ export const RU_MESSAGES: Record<string, string> = {
   "scikit-learn is not installed in this deployment, so the robust profile is used.":
     "scikit-learn не установлен в этом развёртывании, поэтому используется устойчивый профиль.",
   "corpus too small": "корпус слишком мал",
+  // What the specification format can and cannot express.
+  "bit-level fields (use a whole-byte field and mask it manually)":
+    "битовые поля (берите поле целым байтом и накладывайте маску вручную)",
+  "computed or derived fields (no expression language is evaluated)":
+    "вычисляемые и производные поля (язык выражений не вычисляется)",
+  "variable-length numeric fields other than through a repeat group":
+    "числовые поля переменной длины, кроме как через повторяющуюся группу",
+  "checksum verification (no checksum algorithm is assumed or computed)":
+    "проверка контрольных сумм (алгоритм не предполагается и не вычисляется)",
+  "conditional framing (framing is fixed per specification)":
+    "условное кадрирование (кадрирование фиксировано спецификацией)",
+  "Specifications are interpreted as data. No code from a specification is ever imported, compiled or executed.":
+    "Спецификации интерпретируются как данные. Код из спецификации никогда не импортируется, не компилируется и не выполняется.",
   "A dry run executes nothing, so there is nothing for the model to describe. Untick the dry run for an answer.":
     "Пробный запуск ничего не выполняет, поэтому модели нечего описывать. Снимите галочку пробного запуска, чтобы получить ответ.",
   "{available} of {required} {scope}": "{available} из {required} {scope}",
