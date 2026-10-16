@@ -498,6 +498,19 @@ export const RU_MESSAGES: Record<string, string> = {
   "scikit-learn is not installed in this deployment, so the robust profile is used.":
     "scikit-learn не установлен в этом развёртывании, поэтому используется устойчивый профиль.",
   "corpus too small": "корпус слишком мал",
+  "Handshakes are in another capture": "Рукопожатия — в другом захвате",
+  "This capture has no ClientHello, which is a fact about this file and not about the traffic. These captures in the same project do have one:":
+    "В этом захвате нет ClientHello — это факт об этом файле, а не о трафике. Вот захваты того же проекта, где он есть:",
+  "{count} fingerprints": "отпечатков: {count}",
+  // --- TLS fingerprints ---
+  "No ClientHello was fingerprinted in this capture.":
+    "В этом захвате не снят ни один отпечаток ClientHello.",
+  "{non_browser} of {total} client fingerprints match a published library or tool profile rather than a browser. A match identifies a known client family; it is not proof of the implementation and never an indication of maliciousness.":
+    "{non_browser} из {total} клиентских отпечатков совпадают с опубликованным профилем библиотеки или инструмента, а не с браузером. Совпадение указывает на известное семейство клиента; это не доказательство реализации и никогда не признак вредоносности.",
+  "All {total} matched client fingerprints are browser profiles or unknown. A match identifies a known client family and is never an indication of maliciousness.":
+    "Все {total} совпавших клиентских отпечатков — профили браузеров или неизвестны. Совпадение указывает на известное семейство клиента и никогда не является признаком вредоносности.",
+  "A hash present in the local database means this hash is published for that client family. It is not proof of the implementation language and never an indication of maliciousness. A missing or unreliable fingerprint means the handshake was absent or truncated in this capture, not that the traffic was not TLS.":
+    "Наличие хэша в локальной базе означает, что этот хэш опубликован для данного семейства клиента. Это не доказательство языка реализации и никогда не признак вредоносности. Отсутствующий или ненадёжный отпечаток означает, что рукопожатия в этом захвате не было или оно было обрезано, а не то, что трафик не был TLS.",
   // What the specification format can and cannot express.
   "bit-level fields (use a whole-byte field and mask it manually)":
     "битовые поля (берите поле целым байтом и накладывайте маску вручную)",

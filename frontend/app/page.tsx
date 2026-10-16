@@ -16,11 +16,16 @@ import { useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { formatBytes, formatNumber } from "@/lib/format";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useStreamingBoundary } from "@/lib/i18n";
 
 export default function OverviewPage() {
   const workspace = useWorkspace();
   const { t } = useI18n();
+  // Joins the shell's streaming boundary. This page reads no query parameter,
+  // and without this it renders into the fallback and the client never replaces
+  // it - which is how the landing page hung on "Loading…" on every hard load
+  // while working perfectly when reached by clicking through the menu.
+  useStreamingBoundary();
 
   const metrics = useAsync(
     () =>

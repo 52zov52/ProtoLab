@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -140,6 +141,27 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
 export function useI18n(): I18n {
   return useContext(I18nContext);
+}
+
+/**
+ * Join the shell's streaming boundary.
+ *
+ * The shell renders inside a `<Suspense>` boundary, and pages that read the
+ * query string suspend into it - which is why the boundary must be above them.
+ * A page that never suspends is a problem there: the server renders it into the
+ * fallback position and the client never replaces it, so the application sits on
+ * "Loading…" forever. No error, no failed request, a server response that looks
+ * correct - and reaching the same page by clicking through the interface works,
+ * because the boundary is not re-entered.
+ *
+ * Found by loading `/tls` and `/sessions` directly. Verified: with this call
+ * the page settles in about 30 ms; without it, it never settles at all.
+ *
+ * Not dead code, and not a workaround to be cleaned up later: it is how a page
+ * without a `?project=` parameter takes part in the boundary the shell provides.
+ */
+export function useStreamingBoundary(): void {
+  useSearchParams();
 }
 
 /** Convenience for components that only need the translator. */

@@ -17,7 +17,7 @@ import { useAction, useAsync } from "@/hooks/use-async";
 import { useProtocolFilter } from "@/hooks/use-protocol-filter";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useStreamingBoundary } from "@/lib/i18n";
 
 /** ISO timestamps are shown in the active locale, never as a raw string. */
 function formatIsoDate(value: string, locale: "en" | "ru"): string {
@@ -36,6 +36,9 @@ export default function ProjectSettingsPage() {
   const workspace = useWorkspace();
   const router = useRouter();
   const { t, locale } = useI18n();
+  // Joins the shell's streaming boundary: a page that never suspends would
+  // otherwise render into the fallback and the client would never replace it.
+  useStreamingBoundary();
   const projectId = workspace.projectId;
   const protocolFilter = useProtocolFilter();
 

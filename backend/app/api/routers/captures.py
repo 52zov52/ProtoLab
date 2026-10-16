@@ -10,6 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 from sqlalchemy import func, select
 
+from ... import prose
 from ...core.errors import LimitExceeded, NotFound, ValidationFailed
 from ...core.logging import AuditEvent, get_logger
 from ...core.security import safe_display_filename
@@ -519,18 +520,13 @@ def capture_tls(capture_id: str, session: SessionDep, storage: StorageDep) -> di
         item for item in client_hellos if item["category"] not in ("browser", "unknown")
     ]
     if not client_hellos:
-        statement = "No ClientHello was fingerprinted in this capture."
+        statement = prose.FINGERPRINT_NO_CLIENT_HELLO
     elif non_browser:
-        statement = (
-            f"{len(non_browser)} of {len(client_hellos)} client fingerprints match a published "
-            "library or tool profile rather than a browser. A match identifies a known client "
-            "family; it is not proof of the implementation and never an indication of maliciousness."
+        statement = prose.FINGERPRINT_NON_BROWSER.format(
+            non_browser=len(non_browser), total=len(client_hellos)
         )
     else:
-        statement = (
-            f"All {len(client_hellos)} matched client fingerprints are browser profiles or unknown. "
-            "A match identifies a known client family and is never an indication of maliciousness."
-        )
+        statement = prose.FINGERPRINT_ALL_BROWSER.format(total=len(client_hellos))
 
     return {
         "capture_id": capture.id,
@@ -547,12 +543,7 @@ def capture_tls(capture_id: str, session: SessionDep, storage: StorageDep) -> di
         },
         "fingerprint_database": BASE_VERSION,
         "database": DB_METADATA,
-        "interpretation_note": (
-            "A hash present in the local database means this hash is published for that client "
-            "family. It is not proof of the implementation language and never an indication of "
-            "maliciousness. A missing or unreliable fingerprint means the handshake was absent or "
-            "truncated in this capture, not that the traffic was not TLS."
-        ),
+        "interpretation_note": prose.FINGERPRINT_NOTE,
     }
 
 

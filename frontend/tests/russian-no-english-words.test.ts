@@ -23,6 +23,7 @@ const ALLOWED = new Set([
   "AES-GCM",
   "ChaCha20-Poly1305",
   "GCM",
+  "ClientHello",
   "JA3",
   "JA3S",
   "JWT",

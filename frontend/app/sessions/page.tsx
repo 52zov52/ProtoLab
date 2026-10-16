@@ -21,7 +21,7 @@ import {
   formatTimestamp,
   roleTone,
 } from "@/lib/format";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useStreamingBoundary } from "@/lib/i18n";
 
 type TimelineEvent = {
   packet_index: number;
@@ -41,6 +41,9 @@ type TimelineEvent = {
 export default function SessionsPage() {
   const workspace = useWorkspace();
   const { t } = useI18n();
+  // Joins the shell's streaming boundary: a page that never suspends would
+  // otherwise render into the fallback and the client would never replace it.
+  useStreamingBoundary();
 
   const captureId = workspace.captureId;
   const [selected, setSelected] = useState<string | null>(workspace.sessionId);

@@ -16,7 +16,7 @@ import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import type { StatusTone } from "@/lib/format";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useStreamingBoundary } from "@/lib/i18n";
 
 const CATEGORY_TONE: Record<string, StatusTone> = {
   browser: "ok",
@@ -291,12 +291,45 @@ function DecryptPanel({
 export default function TlsPage() {
   const workspace = useWorkspace();
   const { t } = useI18n();
+  // This page takes no ?project= parameter, but it still has to join the shell's
+  // streaming boundary: without this it renders into the fallback and the client
+  // never replaces it, leaving the application on "Loading…" on a hard load.
+  useStreamingBoundary();
   const captureId = workspace.captureId;
   const [nonBrowserOnly, setNonBrowserOnly] = useState(false);
 
   const tls = useAsync(
     () => (captureId ? api.captureTls(captureId) : Promise.resolve(null)),
     [captureId, workspace.revision],
+  );
+
+  /**
+   * Captures elsewhere in the project that *do* carry a handshake.
+   *
+   * The page reports on the selected capture, which is right - but "no
+   * fingerprints here" reads as "the feature found nothing" when the truth is
+   * often "this particular file has no ClientHello and another one does". Saying
+   * so turns a dead end into one click.
+   */
+  const withHandshakes = useAsync(
+    async () => {
+      const pid = workspace.projectId;
+      if (!pid) return [];
+      const captures = await api.projectCaptures(pid);
+      const found: { id: string; name: string; count: number }[] = [];
+      for (const capture of captures) {
+        if (capture.id === captureId) continue;
+        try {
+          const report = await api.captureTls(capture.id);
+          const count = (report?.fingerprints ?? []).length;
+          if (count > 0) found.push({ id: capture.id, name: capture.name, count });
+        } catch {
+          /* a capture that cannot be read simply has nothing to offer here */
+        }
+      }
+      return found;
+    },
+    [captureId, workspace.projectId, workspace.revision],
   );
 
   const fingerprints = useMemo(() => {
@@ -355,9 +388,36 @@ export default function TlsPage() {
           </Panel>
         ) : tls.data ? (
           <div className="flex flex-col gap-3">
+            {(withHandshakes.data?.length ?? 0) > 0 && (
+              <Panel title={t("Handshakes are in another capture")}>
+                <div className="space-y-2 p-3 text-2xs">
+                  <p className="text-text-muted">
+                    {t(
+                      "This capture has no ClientHello, which is a fact about this file and not about the traffic. These captures in the same project do have one:",
+                    )}
+                  </p>
+                  <ul className="space-y-1">
+                    {(withHandshakes.data ?? []).map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          className="link text-left"
+                          onClick={() => workspace.selectCapture(item.id)}
+                        >
+                          {item.name}
+                        </button>
+                        <span className="ml-2 font-mono text-text-faint">
+                          {t("{count} fingerprints", { count: item.count })}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Panel>
+            )}
             <Panel title={t("Verdict")}>
               <div className="space-y-2 p-3">
-                <p className="text-xs text-text">{tls.data.verdict.statement}</p>
+                <p className="text-xs text-text">{t(String(tls.data.verdict.statement))}</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="info">
                     {t("client fingerprints: {count}", {

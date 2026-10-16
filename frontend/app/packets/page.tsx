@@ -16,7 +16,7 @@ import { useAsync } from "@/hooks/use-async";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { api } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useStreamingBoundary } from "@/lib/i18n";
 
 const PAGE_SIZE = 250;
 const TRANSPORTS = ["TCP", "UDP", "ICMP", "IGMP", "other"];
@@ -44,6 +44,9 @@ function bytesToLines(bytes: Uint8Array): {
 export default function PacketsPage() {
   const workspace = useWorkspace();
   const { t } = useI18n();
+  // Joins the shell's streaming boundary: a page that never suspends would
+  // otherwise render into the fallback and the client would never replace it.
+  useStreamingBoundary();
   const captureId = workspace.captureId;
 
   const [search, setSearch] = useState("");

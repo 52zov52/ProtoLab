@@ -12,7 +12,7 @@ import {
 } from "@/components/ui";
 import { useAction, useAsync } from "@/hooks/use-async";
 import { checkTone, cn } from "@/lib/format";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useStreamingBoundary } from "@/lib/i18n";
 
 type Check = {
   id: string;
@@ -26,6 +26,9 @@ type Check = {
 export default function SecurityPage() {
   const report = useAsync(() => api_securityReport(), []);
   const { t } = useI18n();
+  // Joins the shell's streaming boundary: a page that never suspends would
+  // otherwise render into the fallback and the client would never replace it.
+  useStreamingBoundary();
   const action = useAction();
   const [tab, setTab] = useState<"checks" | "audit">("checks");
 

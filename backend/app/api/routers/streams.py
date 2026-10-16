@@ -128,13 +128,7 @@ def stream_tls_fingerprints(stream_id: str, session: SessionDep, storage: Storag
         "handshakes": handshakes,
         "count": len(handshakes),
         "fingerprint_database": BASE_VERSION,
-        "interpretation_note": (
-            "A hash present in the local database means this hash is published for that "
-            "client family. It is not proof of the implementation language and never an "
-            "indication of maliciousness. A missing or unreliable fingerprint means the "
-            "handshake was absent or truncated in this capture, not that the traffic was "
-            "not TLS."
-        ),
+        "interpretation_note": prose.FINGERPRINT_NOTE,
     }
 
 
